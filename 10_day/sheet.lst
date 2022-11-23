@@ -1,0 +1,35 @@
+     1 00000000                                 [FORMAT "WCOFF"]
+     2 00000000                                 [INSTRSET "i486p"]
+     3 00000000                                 [OPTIMIZE 1]
+     4 00000000                                 [OPTION 1]
+     5 00000000                                 [BITS 32]
+     6 00000000                                 	EXTERN	_memman_alloc_4k
+     7 00000000                                 [FILE "sheet.c"]
+     8                                          [SECTION .text]
+     9 00000000                                 	GLOBAL	_shtctl_init
+    10 00000000                                 _shtctl_init:
+    11 00000000 55                              	PUSH	EBP
+    12 00000001 89 E5                           	MOV	EBP,ESP
+    13 00000003 68 00002410                     	PUSH	9232
+    14 00000008 FF 75 08                        	PUSH	DWORD [8+EBP]
+    15 0000000B E8 [00000000]                   	CALL	_memman_alloc_4k
+    16 00000010 89 C2                           	MOV	EDX,EAX
+    17 00000012 58                              	POP	EAX
+    18 00000013 59                              	POP	ECX
+    19 00000014 85 D2                           	TEST	EDX,EDX
+    20 00000016 74 20                           	JE	L3
+    21 00000018 8B 45 0C                        	MOV	EAX,DWORD [12+EBP]
+    22 0000001B 89 02                           	MOV	DWORD [EDX],EAX
+    23 0000001D 8B 45 10                        	MOV	EAX,DWORD [16+EBP]
+    24 00000020 89 42 04                        	MOV	DWORD [4+EDX],EAX
+    25 00000023 8B 45 14                        	MOV	EAX,DWORD [20+EBP]
+    26 00000026 89 42 08                        	MOV	DWORD [8+EDX],EAX
+    27 00000029 B8 000000FF                     	MOV	EAX,255
+    28 0000002E C7 42 0C FFFFFFFF               	MOV	DWORD [12+EDX],-1
+    29 00000035                                 L8:
+    30 00000035 48                              	DEC	EAX
+    31 00000036 79 FD                           	JNS	L8
+    32 00000038                                 L3:
+    33 00000038 89 D0                           	MOV	EAX,EDX
+    34 0000003A C9                              	LEAVE
+    35 0000003B C3                              	RET
