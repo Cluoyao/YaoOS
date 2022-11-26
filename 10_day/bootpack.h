@@ -142,3 +142,38 @@ unsigned int memman_alloc(MEMMAN *man, unsigned int size);
 int          memman_free(MEMMAN *man, unsigned int addr, unsigned int size);
 unsigned int memman_alloc_4k(MEMMAN *man, unsigned int size);
 int          memman_free_4k(MEMMAN *man, unsigned int addr, unsigned int size);
+
+
+/* 图层信息 */
+#define MAX_SHEETS         256
+#define SHEET_USE          1
+
+typedef struct _SHEET_
+{
+    unsigned char *buf;
+    int            bxsize,   // x方向大小
+                   bysize,   // y方向大小
+                   vx0,      // 左上x
+                   vy0,      // 左上y
+                   col_inv,  // 透明色色号
+                   height,   // 图层高度(代表三维上的高度，比如有三个图层，如果是最上面的图层，那高度就是3（2？）)
+                   flags;    // 图层的设定信息
+}SHEET;
+
+typedef struct _SHTCTL_
+{
+    unsigned char *vram;  // 整个屏幕的显示首地址
+    int            xsize, // 屏幕分辨率x
+                   ysize, // 屏幕分辨率y
+                   top;   // 最上面图层的高度（代表最上面图层的高度，也表达了图层的个数）
+    SHEET         *sheets[MAX_SHEETS];
+    SHEET          sheets0[MAX_SHEETS];
+}SHTCTL;
+
+SHTCTL* shtctl_init(MEMMAN *memman, unsigned char *vram, int xsize, int ysize);
+SHEET*  sheet_alloc(SHTCTL *ctl);
+void    sheet_setbuf(SHEET *sht, unsigned char *buf, int xsize, int ysize, int col_inv);
+void    sheet_refresh(SHTCTL *ctl);
+void    sheet_slide(SHTCTL *ctl, SHEET *sht, int vx0, int vy0);
+void    sheet_free(SHTCTL *ctl, SHEET *sht);
+void    sheet_updown(SHTCTL *ctl, SHEET *sht, int height);
