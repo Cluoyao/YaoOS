@@ -70,7 +70,7 @@ void HariMain(void)
 	/* 在背景图层上显示信息 */
 	putfonts8_asc(buf_back, binfo->scrnx, 0, 32, COL8_FFFFFF, s);
 	/* 刷新两个图层 */
-	sheet_refresh(shtctl);
+	sheet_refresh(shtctl, sht_back, 0, 0, binfo->scrnx, 48); /* 刷新打印信息 */
 
 	for (;;) {
 		io_cli();
@@ -87,7 +87,7 @@ void HariMain(void)
 				sprintf(s, "%02X", i);
 				boxfill8(buf_back, binfo->scrnx, COL8_008484,  0, 16, 15, 31);
 				putfonts8_asc(buf_back, binfo->scrnx, 0, 16, COL8_FFFFFF, s);
-				sheet_refresh(shtctl);
+				sheet_refresh(shtctl, sht_back, 0, 16, 16, 32);
 			} 
 			else if (fifo8_status(&mousefifo) != 0) 
 			{
@@ -111,6 +111,7 @@ void HariMain(void)
 					}
 					boxfill8(buf_back, binfo->scrnx, COL8_008484, 32, 16, 32 + 15 * 8 - 1, 31);
 					putfonts8_asc(buf_back, binfo->scrnx, 32, 16, COL8_FFFFFF, s);
+					sheet_refresh(shtctl, sht_back, 32, 16, 32 + 15 * 8, 32);
 
 					mx += mdec.x;
 					my += mdec.y;
@@ -134,6 +135,7 @@ void HariMain(void)
 					boxfill8(buf_back, binfo->scrnx, COL8_008484, 0, 0, 79, 15); /* 擦除坐标 */
 					putfonts8_asc(buf_back, binfo->scrnx, 0, 0, COL8_FFFFFF, s); /* 显示坐标 */
 					/* 因为鼠标这个图层不需要重新绘制，所以是直接移动 */
+					sheet_refresh(shtctl, sht_back, 0, 0, 80, 16);
 					sheet_slide(shtctl, sht_mouse, mx, my);
 				}
 			}

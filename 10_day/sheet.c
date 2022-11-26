@@ -54,46 +54,30 @@ void sheet_setbuf(SHEET *sht, unsigned char *buf, int xsize, int ysize, int col_
     return ;
 }
 
-void sheet_refresh(SHTCTL *ctl)
+void sheet_refresh(SHTCTL *ctl, SHEET *sht, int bx0, int by0, int bx1, int by1)
 {
-    int            h, bx, by, vx, vy;
-    unsigned char *buf, c, *vram = ctl->vram;
-    SHEET         *sht;
-
-    /* 从下往上绘制 */
-    for(h = 0; h <= ctl->top; h++)
+    if(sht->height >= 0)
     {
-        sht = ctl->sheets[h]; /* 图层结构体指针*/
-        buf = sht->buf;       /* 图层缓存空间首地址*/
-
-        for(by = 0; by < sht->bysize; by++)
-        {
-            vy = sht->vy0 + by; /* 左上角加偏移量 */
-            for(bx = 0; bx < sht->bxsize; bx++)
-            {
-                vx = sht->vx0 + bx;
-                c  = buf[by * sht->bxsize + bx]; /* 说明该图层仅是用来记录图层信息，并不负责在显存显示 */
-                if(c != sht->col_inv)
-                {
-                    /* 在显存上进行绘制 */
-                    vram[vy * ctl->xsize + vx] = c;
-                }
-            }
-        }
+        sheet_refreshsub(ctl, sht->vx0 + bx0, sht->vy0 + by0, sht->vx0 + bx1, sht->vy0 + by1);
     }
-
     return ;
 }
 
 void sheet_slide(SHTCTL *ctl, SHEET *sht, int vx0, int vy0)
 {
+    int old_vx0 = sht->vx0;
+    int old_vy0 = sht->vy0;
+
     sht->vx0 = vx0;
     sht->vy0 = vy0;
+
     if(sht->height >= 0)
     {
         /* 如果正在显示 */
         /* 按新图层的信息刷新画面 */
-        sheet_refresh(ctl);
+        sheet_refreshsub(ctl, old_vx0, old_vy0, old_vx0 + sht->bxsize, old_vy0 + sht->bysize); /* 两对x,y描述矩形图层 */
+        sheet_refreshsub(ctl, vx0, vy0, vx0 + sht->bxsize, vy0 + sht->bysize);
+        //sheet_refresh(ctl);
     }
     return;
 }
@@ -161,7 +145,7 @@ void sheet_updown(SHTCTL *ctl, SHEET *sht, int height)
             ctl->top--;
         }
         /* 按新图层的信息重新绘制画面 */
-        sheet_refresh(ctl);
+        sheet_refreshsub(ctl, sht->vx0, sht->vy0, sht->vx0 + sht->bxsize, sht->vy0 + sht->bysize);
     }
     else if(old < height)
     {
@@ -192,7 +176,42 @@ void sheet_updown(SHTCTL *ctl, SHEET *sht, int height)
             /* 由于已显示图层增加了1个，所以最上面的图层高度增加 */
             ctl->top++;
         }
-        sheet_refresh(ctl);
+        sheet_refreshsub(ctl, sht->vx0, sht->vy0, sht->vx0 + sht->bxsize, sht->vy0 + sht->bysize);
     }
     return ;
+}
+
+/* vx0,vy0:移动前的位置；vx1,vy1:移动后的位置 */
+void sheet_refreshsub(SHTCTL *ctl, int vx0, int vy0, int vx1, int vy1)
+{
+    int            h, bx, by, vx, vy;
+    unsigned char *buf, c, *vram = ctl->vram;
+    SHEET         *sht;
+
+    for(h=0; h<=ctl->top; h++)
+    {
+        sht = ctl->sheets[h];
+        buf = sht->buf;
+
+        for(by = 0; by < sht->bysize; by++)
+        {
+            vy = sht->vy0 + by;
+            for(bx = 0; bx < sht->bxsize; bx++)
+            {
+                vx = sht->vx0 + bx;
+                /* 如果vx0 <= vx < vx1 并且 vy0 <= vy < vy1 */
+                if(vx0 <= vx && vx < vx1 && vy0 <= vy && vy < vy1)
+                {
+                    c = buf[by * sht->bxsize + bx]; /* 这是访问图层信息的方式 */
+                    if(c != sht->col_inv)
+                    {
+                        /* 这是访问显存信息的方式 */
+                        vram[vy * ctl->xsize + vx] = c;
+                    }
+                }
+            }
+        }
+    }
+
+    return;
 }
