@@ -39,31 +39,37 @@ void HariMain(void)
 
 	init_palette();
 	shtctl    = shtctl_init(memman, binfo->vram, binfo->scrnx, binfo->scrny);
-	sht_back  = sheet_alloc(shtctl); /* 从管理单元中拿一个图层出来用 */
-	sht_mouse = sheet_alloc(shtctl);
-	buf_back  = (unsigned char *)memman_alloc_4k(memman, binfo->scrnx * binfo->scrny);
+	sht_back  = sheet_alloc(shtctl); /* 从管理单元中拿一个图层出来用，作为背景图层 */
+	sht_mouse = sheet_alloc(shtctl); /* 从管理单元拿出一个图层来用，作为鼠标图层 */
+	buf_back  = (unsigned char *)memman_alloc_4k(memman, binfo->scrnx * binfo->scrny); /* 分配图层缓存，存放背景信息 */
 	sheet_setbuf(sht_back,  buf_back,  binfo->scrnx, binfo->scrny, -1); /* 没有透明色 */
 	sheet_setbuf(sht_mouse, buf_mouse, 16, 16, 99); /* 透明色号99 */
 
+	/* 填充图层中每个像素的点上的颜色信息 */
 	init_screen8(buf_back, binfo->scrnx, binfo->scrny);
 	init_mouse_cursor8(buf_mouse, 99); /* 背景色号99 */
 
+	/* 从左上角(0,0)点开始绘制显示界面 */
 	sheet_slide(shtctl, sht_back, 0, 0);
 
 	mx = (binfo->scrnx - 16) / 2; /* 计算画面中心坐标 */
 	my = (binfo->scrny - 28 - 16) / 2;
 
+	/* 移动鼠标图层到指定位置 */
 	sheet_slide(shtctl, sht_mouse, mx, my);
+	/* 设置显示背景（图层）高度为0 */
 	sheet_updown(shtctl, sht_back,  0);
+	/* 设置鼠标（图层）高度为1 */
 	sheet_updown(shtctl, sht_mouse, 1);
 
-	//init_mouse_cursor8(mcursor, COL8_008484);
-	//putblock8_8(binfo->vram, binfo->scrnx, 16, 16, mx, my, mcursor, 16);
 	sprintf(s, "(%d, %d)", mx, my);
+	/* 在背景图层上显示信息 */
 	putfonts8_asc(buf_back, binfo->scrnx, 0, 0, COL8_FFFFFF, s);
 
 	sprintf(s, "memory %dMB free : %dKB", memtotal / (1024 * 1024), memman_total(memman) / 1024);
+	/* 在背景图层上显示信息 */
 	putfonts8_asc(buf_back, binfo->scrnx, 0, 32, COL8_FFFFFF, s);
+	/* 刷新两个图层 */
 	sheet_refresh(shtctl);
 
 	for (;;) {
@@ -105,8 +111,7 @@ void HariMain(void)
 					}
 					boxfill8(buf_back, binfo->scrnx, COL8_008484, 32, 16, 32 + 15 * 8 - 1, 31);
 					putfonts8_asc(buf_back, binfo->scrnx, 32, 16, COL8_FFFFFF, s);
-					/* 鼠标指针的移动 */
-					//boxfill8(binfo->vram, binfo->scrnx, COL8_008484, mx, my, mx + 15, my + 15); /* 隐藏鼠标 */
+
 					mx += mdec.x;
 					my += mdec.y;
 					if (mx < 0)
@@ -126,8 +131,9 @@ void HariMain(void)
 						my = binfo->scrny - 16;
 					}
 					sprintf(s, "(%3d, %3d)", mx, my);
-					boxfill8(buf_back, binfo->scrnx, COL8_008484, 0, 0, 79, 15); /* 隐藏坐标 */
+					boxfill8(buf_back, binfo->scrnx, COL8_008484, 0, 0, 79, 15); /* 擦除坐标 */
 					putfonts8_asc(buf_back, binfo->scrnx, 0, 0, COL8_FFFFFF, s); /* 显示坐标 */
+					/* 因为鼠标这个图层不需要重新绘制，所以是直接移动 */
 					sheet_slide(shtctl, sht_mouse, mx, my);
 				}
 			}
