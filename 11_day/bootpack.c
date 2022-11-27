@@ -14,7 +14,7 @@ void HariMain(void)
 	int              mx, my, i;
 	struct MOUSE_DEC mdec;
 
-	unsigned int     memtotal;
+	unsigned int     memtotal, count = 0;
 	MEMMAN          *memman = (MEMMAN *) MEMMAN_ADDR;
 	SHTCTL          *shtctl;
 	SHEET           *sht_back, *sht_mouse, *sht_win;
@@ -43,17 +43,17 @@ void HariMain(void)
 	sht_mouse = sheet_alloc(shtctl); /* 从管理单元拿出一个图层来用，作为鼠标图层 */
 	sht_win   = sheet_alloc(shtctl); 
 	buf_back  = (unsigned char *)memman_alloc_4k(memman, binfo->scrnx * binfo->scrny); /* 分配图层缓存，存放背景信息 */
-	buf_win   = (unsigned char *)memman_alloc_4k(memman, 160 * 68);
+	buf_win   = (unsigned char *)memman_alloc_4k(memman, 160 * 52);
 	sheet_setbuf(sht_back,  buf_back,  binfo->scrnx, binfo->scrny, -1); /* 没有透明色 */
 	sheet_setbuf(sht_mouse, buf_mouse, 16, 16, 99); /* 透明色号99 */
-	sheet_setbuf(sht_win, buf_win, 160, 68, -1);
+	sheet_setbuf(sht_win, buf_win, 160, 52, -1);
 
 	/* 填充图层中每个像素的点上的颜色信息 */
 	init_screen8(buf_back, binfo->scrnx, binfo->scrny);
 	init_mouse_cursor8(buf_mouse, 99); /* 背景色号99 */
-	make_window8(buf_win, 160, 68, "Window");
-	putfonts8_asc(buf_win, 160, 24, 28, COL8_000000, "Welcome to");
-	putfonts8_asc(buf_win, 160, 24, 44, COL8_000000, "    YaoOS!");
+	make_window8(buf_win, 160, 52, "Counter");
+	// putfonts8_asc(buf_win, 160, 24, 28, COL8_000000, "Welcome to");
+	// putfonts8_asc(buf_win, 160, 24, 44, COL8_000000, "    YaoOS!");
 
 	/* 从左上角(0,0)点开始绘制显示界面 */
 	sheet_slide(sht_back, 0, 0);
@@ -81,6 +81,13 @@ void HariMain(void)
 	sheet_refresh(sht_back, 0, 0, binfo->scrnx, 48); /* 刷新打印信息 */
 
 	for (;;) {
+
+		count++;
+		sprintf(s, "%010d", count);
+		boxfill8(buf_win, 160, COL8_C6C6C6, 40, 28, 119, 43);
+		putfonts8_asc(buf_win, 160, 40, 28, COL8_000000, s);
+		sheet_refresh(sht_win, 40, 28, 120, 44);
+
 		io_cli();
 		if (fifo8_status(&keyfifo) + fifo8_status(&mousefifo) == 0) 
 		{
