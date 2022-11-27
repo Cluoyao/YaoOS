@@ -163,7 +163,7 @@ typedef struct _SHEET_
 
 typedef struct _SHTCTL_
 {
-    unsigned char *vram;  // 整个屏幕的显示首地址
+    unsigned char *vram, *map;  // 整个屏幕的显示首地址,map用于区分不同图层信息
     int            xsize, // 屏幕分辨率x
                    ysize, // 屏幕分辨率y
                    top;   // 最上面图层的高度（代表最上面图层的高度，也表达了图层的个数）
@@ -178,4 +178,5 @@ void    sheet_refresh(SHEET *sht, int bx0, int by0, int bx1, int by1);
 void    sheet_slide(SHEET *sht, int vx0, int vy0);
 void    sheet_free(SHEET *sht);
 void    sheet_updown(SHEET *sht, int height);
-void    sheet_refreshsub(SHTCTL *ctl, int vx0, int vy0, int vx1, int vy1, int h0);
+void    sheet_refreshsub(SHTCTL *ctl, int vx0, int vy0, int vx1, int vy1, int h0, int h1);
+void    sheet_refreshmap(SHTCTL *ctl, int vx0, int vy0, int vx1, int vy1, int h0);
