@@ -178,4 +178,4 @@ void    sheet_refresh(SHEET *sht, int bx0, int by0, int bx1, int by1);
 void    sheet_slide(SHEET *sht, int vx0, int vy0);
 void    sheet_free(SHEET *sht);
 void    sheet_updown(SHEET *sht, int height);
-void    sheet_refreshsub(SHTCTL *ctl, int vx0, int vy0, int vx1, int vy1);
+void    sheet_refreshsub(SHTCTL *ctl, int vx0, int vy0, int vx1, int vy1, int h0);

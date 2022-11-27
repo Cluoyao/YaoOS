@@ -60,7 +60,7 @@ void sheet_refresh(SHEET *sht, int bx0, int by0, int bx1, int by1)
     SHTCTL *ctl = (SHTCTL *)sht->ctl;
     if(sht->height >= 0)
     {
-        sheet_refreshsub(ctl, sht->vx0 + bx0, sht->vy0 + by0, sht->vx0 + bx1, sht->vy0 + by1);
+        sheet_refreshsub(ctl, sht->vx0 + bx0, sht->vy0 + by0, sht->vx0 + bx1, sht->vy0 + by1, sht->height);
     }
     return ;
 }
@@ -78,8 +78,8 @@ void sheet_slide(SHEET *sht, int vx0, int vy0)
     {
         /* 如果正在显示 */
         /* 按新图层的信息刷新画面 */
-        sheet_refreshsub(ctl, old_vx0, old_vy0, old_vx0 + sht->bxsize, old_vy0 + sht->bysize); /* 两对x,y描述矩形图层 */
-        sheet_refreshsub(ctl, vx0, vy0, vx0 + sht->bxsize, vy0 + sht->bysize);
+        sheet_refreshsub(ctl, old_vx0, old_vy0, old_vx0 + sht->bxsize, old_vy0 + sht->bysize, 0); /* 两对x,y描述矩形图层 */
+        sheet_refreshsub(ctl, vx0, vy0, vx0 + sht->bxsize, vy0 + sht->bysize, sht->height);
         //sheet_refresh(ctl);
     }
     return;
@@ -131,6 +131,8 @@ void sheet_updown(SHEET *sht, int height)
             }
             // 塞到想要设置的height位置
             ctl->sheets[height] = sht;
+            /* 刷新其上面的图层 */
+            sheet_refreshsub(ctl, sht->vx0, sht->vy0, sht->vx0 + sht->bxsize, sht->vy0 + sht->bysize, height + 1);
         }
         else
         {
@@ -148,9 +150,10 @@ void sheet_updown(SHEET *sht, int height)
             /* 由于图层减少了一个，所以最上面的图层高度下降，这里说明一个问题，图层高度仅代表所有显示的图层，如果图层为-1，不会影响
                ctl的高度的！ */
             ctl->top--;
+            /* 刷新背景 */
+            sheet_refreshsub(ctl, sht->vx0, sht->vy0, sht->vx0 + sht->bxsize, sht->vy0 + sht->bysize, 0);
         }
-        /* 按新图层的信息重新绘制画面 */
-        sheet_refreshsub(ctl, sht->vx0, sht->vy0, sht->vx0 + sht->bxsize, sht->vy0 + sht->bysize);
+
     }
     else if(old < height)
     {
@@ -181,13 +184,14 @@ void sheet_updown(SHEET *sht, int height)
             /* 由于已显示图层增加了1个，所以最上面的图层高度增加 */
             ctl->top++;
         }
-        sheet_refreshsub(ctl, sht->vx0, sht->vy0, sht->vx0 + sht->bxsize, sht->vy0 + sht->bysize);
+        /* 刷新该图层 */
+        sheet_refreshsub(ctl, sht->vx0, sht->vy0, sht->vx0 + sht->bxsize, sht->vy0 + sht->bysize, height);
     }
     return ;
 }
 
 /* vx0,vy0:移动前的位置；vx1,vy1:移动后的位置 */
-void sheet_refreshsub(SHTCTL *ctl, int vx0, int vy0, int vx1, int vy1)
+void sheet_refreshsub(SHTCTL *ctl, int vx0, int vy0, int vx1, int vy1, int h0)
 {
     int            h, bx, by, vx, vy, bx0, by0, bx1, by1;
     unsigned char *buf, c, *vram = ctl->vram;
@@ -198,7 +202,7 @@ void sheet_refreshsub(SHTCTL *ctl, int vx0, int vy0, int vx1, int vy1)
     if(vx1 > ctl->xsize){vx1 = ctl->xsize;}
     if(vy1 > ctl->ysize){vy1 = ctl->ysize;}
 
-    for(h=0; h<=ctl->top; h++)
+    for(h=h0; h<=ctl->top; h++)
     {
         sht = ctl->sheets[h];
         buf = sht->buf;
