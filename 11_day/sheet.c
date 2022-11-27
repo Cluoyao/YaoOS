@@ -238,10 +238,11 @@ void sheet_refreshsub(SHTCTL *ctl, int vx0, int vy0, int vx1, int vy1, int h0, i
             {
                 vx = sht->vx0 + bx;
 
+                /* 如果属于当前图层（sid），我才进行绘制 */
                 if(map[vy * ctl->xsize + vx] == sid)
                 {
                     /* 这是访问显存信息的方式 */
-                    vram[vy * ctl->xsize + vx] = buf[by * sht->bxsize + bx];
+                    vram[vy * ctl->xsize + vx] = buf[by * sht->bxsize + bx]; /* buf存放的是背景的颜色信息 */
                 }
 
             }
@@ -263,6 +264,8 @@ void sheet_refreshmap(SHTCTL *ctl, int vx0, int vy0, int vx1, int vy1, int h0)
     if(vx1 > ctl->xsize){vx1 = ctl->xsize;}
     if(vy1 > ctl->ysize){vy1 = ctl->ysize;}
 
+    /* 对每个图层进行map标识，一个ctl享有一个map，但每个图层在绘制的时候，可能会覆盖掉之前图层的标志*/
+    /* 所以这里从下往上绘制，上面的覆盖下面的，逻辑是合理的！！！*/
     for(h=h0; h<=ctl->top; h++)
     {
         sht = ctl->sheets[h];
