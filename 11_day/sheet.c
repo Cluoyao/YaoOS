@@ -18,7 +18,8 @@ SHTCTL *shtctl_init(MEMMAN *memman, unsigned char *vram, int xsize, int ysize)
     ctl->top   = -1;                /* 一个SHEET都没有 */
     for(i = 0; i<MAX_SHEETS;i++)
     {
-        ctl->sheets0[i].flags == 0; /* 标记为未使用 */
+        ctl->sheets0[i].flags = 0;   /* 标记为未使用 */
+        ctl->sheets0[i].ctl   = ctl; /* 记录所属的ctl */
     }
 
 err:
@@ -54,8 +55,9 @@ void sheet_setbuf(SHEET *sht, unsigned char *buf, int xsize, int ysize, int col_
     return ;
 }
 
-void sheet_refresh(SHTCTL *ctl, SHEET *sht, int bx0, int by0, int bx1, int by1)
+void sheet_refresh(SHEET *sht, int bx0, int by0, int bx1, int by1)
 {
+    SHTCTL *ctl = (SHTCTL *)sht->ctl;
     if(sht->height >= 0)
     {
         sheet_refreshsub(ctl, sht->vx0 + bx0, sht->vy0 + by0, sht->vx0 + bx1, sht->vy0 + by1);
@@ -63,10 +65,11 @@ void sheet_refresh(SHTCTL *ctl, SHEET *sht, int bx0, int by0, int bx1, int by1)
     return ;
 }
 
-void sheet_slide(SHTCTL *ctl, SHEET *sht, int vx0, int vy0)
+void sheet_slide(SHEET *sht, int vx0, int vy0)
 {
-    int old_vx0 = sht->vx0;
-    int old_vy0 = sht->vy0;
+    SHTCTL *ctl     = (SHTCTL *)sht->ctl;
+    int     old_vx0 = sht->vx0;
+    int     old_vy0 = sht->vy0;
 
     sht->vx0 = vx0;
     sht->vy0 = vy0;
@@ -82,12 +85,13 @@ void sheet_slide(SHTCTL *ctl, SHEET *sht, int vx0, int vy0)
     return;
 }
 
-void sheet_free(SHTCTL *ctl, SHEET *sht)
+void sheet_free(SHEET *sht)
 {
+    SHTCTL *ctl     = (SHTCTL *)sht->ctl;
     if(sht->height >= 0)
     {
         /* 如果处于显示状态，则先设定为隐藏 */
-        sheet_updown(ctl, sht, -1);
+        sheet_updown(sht, -1);
     }
     /* 标记 未使用 标志*/
     sht->flags = 0;
@@ -95,9 +99,10 @@ void sheet_free(SHTCTL *ctl, SHEET *sht)
 }
 
 /* 设定底板高度 */
-void sheet_updown(SHTCTL *ctl, SHEET *sht, int height)
+void sheet_updown(SHEET *sht, int height)
 {
-    int h, old = sht->height;
+    int     h, old = sht->height;
+    SHTCTL *ctl    = (SHTCTL *)sht->ctl;
 
     /* 如果高度过高或者过低，则进行修正 */
     if(height > ctl->top + 1) 
@@ -187,6 +192,11 @@ void sheet_refreshsub(SHTCTL *ctl, int vx0, int vy0, int vx1, int vy1)
     int            h, bx, by, vx, vy, bx0, by0, bx1, by1;
     unsigned char *buf, c, *vram = ctl->vram;
     SHEET         *sht;
+
+    if(vx0 < 0){vx0 = 0;}
+    if(vy0 < 0){vy0 = 0;}
+    if(vx1 > ctl->xsize){vx1 = ctl->xsize;}
+    if(vy1 > ctl->ysize){vy1 = ctl->ysize;}
 
     for(h=0; h<=ctl->top; h++)
     {

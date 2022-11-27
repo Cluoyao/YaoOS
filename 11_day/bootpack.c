@@ -50,17 +50,17 @@ void HariMain(void)
 	init_mouse_cursor8(buf_mouse, 99); /* 背景色号99 */
 
 	/* 从左上角(0,0)点开始绘制显示界面 */
-	sheet_slide(shtctl, sht_back, 0, 0);
+	sheet_slide(sht_back, 0, 0);
 
 	mx = (binfo->scrnx - 16) / 2; /* 计算画面中心坐标 */
 	my = (binfo->scrny - 28 - 16) / 2;
 
 	/* 移动鼠标图层到指定位置 */
-	sheet_slide(shtctl, sht_mouse, mx, my);
+	sheet_slide(sht_mouse, mx, my);
 	/* 设置显示背景（图层）高度为0 */
-	sheet_updown(shtctl, sht_back,  0);
+	sheet_updown(sht_back,  0);
 	/* 设置鼠标（图层）高度为1 */
-	sheet_updown(shtctl, sht_mouse, 1);
+	sheet_updown(sht_mouse, 1);
 
 	sprintf(s, "(%d, %d)", mx, my);
 	/* 在背景图层上显示信息 */
@@ -70,7 +70,7 @@ void HariMain(void)
 	/* 在背景图层上显示信息 */
 	putfonts8_asc(buf_back, binfo->scrnx, 0, 32, COL8_FFFFFF, s);
 	/* 刷新两个图层 */
-	sheet_refresh(shtctl, sht_back, 0, 0, binfo->scrnx, 48); /* 刷新打印信息 */
+	sheet_refresh(sht_back, 0, 0, binfo->scrnx, 48); /* 刷新打印信息 */
 
 	for (;;) {
 		io_cli();
@@ -87,7 +87,7 @@ void HariMain(void)
 				sprintf(s, "%02X", i);
 				boxfill8(buf_back, binfo->scrnx, COL8_008484,  0, 16, 15, 31);
 				putfonts8_asc(buf_back, binfo->scrnx, 0, 16, COL8_FFFFFF, s);
-				sheet_refresh(shtctl, sht_back, 0, 16, 16, 32);
+				sheet_refresh(sht_back, 0, 16, 16, 32);
 			} 
 			else if (fifo8_status(&mousefifo) != 0) 
 			{
@@ -111,7 +111,7 @@ void HariMain(void)
 					}
 					boxfill8(buf_back, binfo->scrnx, COL8_008484, 32, 16, 32 + 15 * 8 - 1, 31);
 					putfonts8_asc(buf_back, binfo->scrnx, 32, 16, COL8_FFFFFF, s);
-					sheet_refresh(shtctl, sht_back, 32, 16, 32 + 15 * 8, 32);
+					sheet_refresh(sht_back, 32, 16, 32 + 15 * 8, 32);
 
 					mx += mdec.x;
 					my += mdec.y;
@@ -135,8 +135,8 @@ void HariMain(void)
 					boxfill8(buf_back, binfo->scrnx, COL8_008484, 0, 0, 79, 15); /* 擦除坐标 */
 					putfonts8_asc(buf_back, binfo->scrnx, 0, 0, COL8_FFFFFF, s); /* 显示坐标 */
 					/* 因为鼠标这个图层不需要重新绘制，所以是直接移动 */
-					sheet_refresh(shtctl, sht_back, 0, 0, 80, 16);
-					sheet_slide(shtctl, sht_mouse, mx, my);
+					sheet_refresh(sht_back, 0, 0, 80, 16);
+					sheet_slide(sht_mouse, mx, my);
 				}
 			}
 		}

@@ -158,6 +158,7 @@ typedef struct _SHEET_
                    col_inv,  // 透明色色号
                    height,   // 图层高度(代表三维上的高度，比如有三个图层，如果是最上面的图层，那高度就是3（2？）)
                    flags;    // 图层的设定信息
+	void          *ctl;
 }SHEET;
 
 typedef struct _SHTCTL_
@@ -173,8 +174,8 @@ typedef struct _SHTCTL_
 SHTCTL* shtctl_init(MEMMAN *memman, unsigned char *vram, int xsize, int ysize);
 SHEET*  sheet_alloc(SHTCTL *ctl);
 void    sheet_setbuf(SHEET *sht, unsigned char *buf, int xsize, int ysize, int col_inv);
-void    sheet_refresh(SHTCTL *ctl, SHEET *sht, int bx0, int by0, int bx1, int by1);
-void    sheet_slide(SHTCTL *ctl, SHEET *sht, int vx0, int vy0);
-void    sheet_free(SHTCTL *ctl, SHEET *sht);
-void    sheet_updown(SHTCTL *ctl, SHEET *sht, int height);
+void    sheet_refresh(SHEET *sht, int bx0, int by0, int bx1, int by1);
+void    sheet_slide(SHEET *sht, int vx0, int vy0);
+void    sheet_free(SHEET *sht);
+void    sheet_updown(SHEET *sht, int height);
 void    sheet_refreshsub(SHTCTL *ctl, int vx0, int vy0, int vx1, int vy1);
