@@ -10,7 +10,8 @@
 void HariMain(void)
 {
 	struct BOOTINFO *binfo = (struct BOOTINFO *) ADR_BOOTINFO;
-	char             s[40], mcursor[256], keybuf[32], mousebuf[128];
+	struct FIFO8     timerfifo;
+	char             s[40], mcursor[256], keybuf[32], mousebuf[128], timerbuf[8];
 	int              mx, my, i;
 	struct MOUSE_DEC mdec;
 
@@ -27,6 +28,8 @@ void HariMain(void)
 
 	fifo8_init(&keyfifo, 32, keybuf);
 	fifo8_init(&mousefifo, 128, mousebuf);
+	fifo8_init(&timerfifo, 8, timerbuf);
+	settimer(1000, &timerfifo, 1);
 
 	init_pit();
 
@@ -92,7 +95,7 @@ void HariMain(void)
 		sheet_refresh(sht_win, 40, 28, 120, 44);
 
 		io_cli();
-		if (fifo8_status(&keyfifo) + fifo8_status(&mousefifo) == 0) 
+		if (fifo8_status(&keyfifo) + fifo8_status(&mousefifo) + fifo8_status(&timerfifo) == 0) 
 		{
 			io_stihlt();
 		} 
@@ -156,6 +159,13 @@ void HariMain(void)
 					sheet_refresh(sht_back, 0, 0, 80, 16);
 					sheet_slide(sht_mouse, mx, my);
 				}
+			}
+			else if(fifo8_status(&timerfifo) != 0)
+			{
+				i = fifo8_get(&timerfifo);
+				io_sti();
+				putfonts8_asc(buf_back, binfo->scrnx, 0, 64, COL8_FFFFFF, "10[sec]");
+				sheet_refresh(sht_back, 0, 64, 56, 80);
 			}
 		}
 	}
