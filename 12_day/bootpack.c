@@ -28,10 +28,12 @@ void HariMain(void)
 
 	fifo8_init(&keyfifo, 32, keybuf);
 	fifo8_init(&mousefifo, 128, mousebuf);
+
+	init_pit();
 	fifo8_init(&timerfifo, 8, timerbuf);
 	settimer(1000, &timerfifo, 1);
 
-	init_pit();
+
 
 	io_out8(PIC0_IMR, 0xf8); /* 开放PIC1和键盘中断(11111000) */
 	io_out8(PIC1_IMR, 0xef); /* 开放鼠标中断(11101111) */
