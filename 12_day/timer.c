@@ -54,7 +54,7 @@ void timer_init(TIMER *timer, struct FIFO8 *fifo, unsigned char data)
 
 void timer_settime(TIMER *timer, unsigned int timeout)
 {
-    timer->timeout = timeout;
+    timer->timeout = timeout + timerctl.count;
     timer->flags   = TIMER_FLAGS_USING;
     return;
 }
@@ -69,8 +69,7 @@ void inthandler20(int *esp)
     {
         if(timerctl.timer[i].flags == TIMER_FLAGS_USING)
         {
-            timerctl.timer[i].timeout--;
-            if(timerctl.timer[i].timeout == 0)
+            if(timerctl.timer[i].timeout <= timerctl.count)
             {
                 timerctl.timer[i].flags = TIMER_FLAGS_ALLOC; /* 表示这个timer又是有效的 */
                 fifo8_put(timerctl.timer[i].fifo, timerctl.timer[i].data);
