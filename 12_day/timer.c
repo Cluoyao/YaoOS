@@ -17,6 +17,7 @@ void init_pit(void)
     io_out8(PIT_CNT0, 0x2e);
 
     timerctl.count   = 0;
+    timerctl.next    = 0xffffffff; /*  */
     for(i=0; i<MAX_TIMER; i++)
     {
         timerctl.timer[i].flags = 0; /* 未使用状态 */
@@ -56,6 +57,10 @@ void timer_settime(TIMER *timer, unsigned int timeout)
 {
     timer->timeout = timeout + timerctl.count;
     timer->flags   = TIMER_FLAGS_USING;
+    if(timerctl.next > timer->timeout)
+    {
+        timerctl.next = timer->timeout; /* 为了让当前的timeout设定有意义  */
+    }
     return;
 }
 
@@ -65,6 +70,11 @@ void inthandler20(int *esp)
     io_out8(PIC0_OCW2, 0x60); /* 把 IRQ-00信号接收完了的信息通知给PIC */
     /*暂时啥也不做*/
     timerctl.count++;
+    if(timerctl.next > timerctl.count)
+    {
+        return; /* 如果还不到下一个时刻，就不执行后面的 */
+    }
+    timerctl.next = 0xffffffff;
     for(i=0; i<MAX_TIMER; i++)
     {
         if(timerctl.timer[i].flags == TIMER_FLAGS_USING)
@@ -73,6 +83,13 @@ void inthandler20(int *esp)
             {
                 timerctl.timer[i].flags = TIMER_FLAGS_ALLOC; /* 表示这个timer又是有效的 */
                 fifo8_put(timerctl.timer[i].fifo, timerctl.timer[i].data);
+            }
+            else
+            {
+                if(timerctl.next > timerctl.timer[i].timeout)
+                {
+                    timerctl.next = timerctl.timer[i].timeout;
+                }
             }
         }
     }

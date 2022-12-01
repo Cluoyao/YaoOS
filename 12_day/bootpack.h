@@ -194,7 +194,7 @@ typedef struct _TIMER_
 }TIMER;
 
 typedef struct _TIMERCTL_{
-	unsigned int  count;
+	unsigned int  count, next;
 	TIMER         timer[MAX_TIMER];
 }TIMERCTL;
 
