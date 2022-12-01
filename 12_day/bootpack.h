@@ -184,12 +184,23 @@ void    sheet_refreshmap(SHTCTL *ctl, int vx0, int vy0, int vx1, int vy1, int h0
 
 
 /* timer.c */
+#define MAX_TIMER 500
+typedef struct _TIMER_
+{
+	/* data */
+	unsigned int   timeout, flags; /* flag 用于记录各个定时器的状态 */
+	struct   FIFO *fifo;
+	unsigned char *data;
+}TIMER;
+
 typedef struct _TIMERCTL_{
 	unsigned int  count;
-	unsigned int  timeout;
-	struct FIFO8 *fifo;
-	unsigned char data;
+	TIMER         timer[MAX_TIMER];
 }TIMERCTL;
 
-void init_pit(void);
-void settimer(unsigned int timeout, struct FIFO8 *fifo, unsigned char data);
+void   init_pit(void);
+void   settimer(unsigned int timeout, struct FIFO8 *fifo, unsigned char data);
+TIMER *timer_alloc(void);
+void   timer_free(TIMER *timer);
+void   timer_init(TIMER *timer, struct FIFO8 *fifo, unsigned char data);
+void   timer_settime(TIMER *timer, unsigned int timeout);

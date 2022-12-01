@@ -23,11 +23,11 @@ _io_hlt:	; void io_hlt(void);
 		RET
 
 _io_cli:	; void io_cli(void);
-		CLI
+		CLI  ;禁止中断发生（0）
 		RET
 
 _io_sti:	; void io_sti(void);
-		STI
+		STI  ;允许中断发生（1）
 		RET
 
 _io_stihlt:	; void io_stihlt(void);
