@@ -194,8 +194,9 @@ typedef struct _TIMER_
 }TIMER;
 
 typedef struct _TIMERCTL_{
-	unsigned int  count, next;
-	TIMER         timer[MAX_TIMER];
+	unsigned int  count, next, using; /* using :现在的定时器中有几个处于活动状态 */
+	TIMER         timers0[MAX_TIMER];
+	TIMER        *timers[MAX_TIMER];
 }TIMERCTL;
 
 void   init_pit(void);

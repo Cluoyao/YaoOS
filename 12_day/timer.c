@@ -20,7 +20,7 @@ void init_pit(void)
     timerctl.next    = 0xffffffff; /*  */
     for(i=0; i<MAX_TIMER; i++)
     {
-        timerctl.timer[i].flags = 0; /* 未使用状态 */
+        timerctl.timers0[i].flags = 0; /* 未使用状态 */
     }
 
     return;
@@ -31,10 +31,10 @@ TIMER *timer_alloc(void)
     int i;
     for(i=0; i<MAX_TIMER; i++)
     {
-        if(timerctl.timer[i].flags == 0)
+        if(timerctl.timers0[i].flags == 0)
         {
-            timerctl.timer[i].flags = TIMER_FLAGS_ALLOC;
-            return &timerctl.timer[i];
+            timerctl.timers0[i].flags = TIMER_FLAGS_ALLOC;
+            return &timerctl.timers0[i];
         }
     }
     return 0;
@@ -55,18 +55,38 @@ void timer_init(TIMER *timer, struct FIFO8 *fifo, unsigned char data)
 
 void timer_settime(TIMER *timer, unsigned int timeout)
 {
+    int e, i, j;
     timer->timeout = timeout + timerctl.count;
     timer->flags   = TIMER_FLAGS_USING;
-    if(timerctl.next > timer->timeout)
+    e = io_load_eflags(); /* 记录中断状态 */
+    io_cli(); /* 禁止中断 */
+
+    /* 搜索注册位置 */
+    for(i = 0; i < timerctl.using; i++)
     {
-        timerctl.next = timer->timeout; /* 为了让当前的timeout设定有意义  */
+        /* 找到一个比timers里面的timeout大的位置 */
+        if(timerctl.timers[i]->timeout >= timer->timeout)
+        {
+            break;
+        }
     }
+
+    /* timer此时应该放在i的位置，i之后的往后挪 */
+    for(j = timerctl.using; j > i; j--)
+    {
+        timerctl.timers[j] = timerctl.timers[j - 1];
+    }
+    timerctl.using++;
+    timerctl.timers[i] = timer;
+    timerctl.next      = timerctl.timers[0]->timeout;
+    io_store_eflags(e);
+
     return;
 }
 
 void inthandler20(int *esp)
 {
-    int i;
+    int i, j;
     io_out8(PIC0_OCW2, 0x60); /* 把 IRQ-00信号接收完了的信息通知给PIC */
     /*暂时啥也不做*/
     timerctl.count++;
@@ -74,24 +94,38 @@ void inthandler20(int *esp)
     {
         return; /* 如果还不到下一个时刻，就不执行后面的 */
     }
-    timerctl.next = 0xffffffff;
-    for(i=0; i<MAX_TIMER; i++)
+
+    for(i = 0; i < timerctl.using; i++)
     {
-        if(timerctl.timer[i].flags == TIMER_FLAGS_USING)
+        /* timers的定时器都处于动作中，所以不确认flags */
+        if(timerctl.timers[i]->timeout > timerctl.count)
         {
-            if(timerctl.timer[i].timeout <= timerctl.count)
-            {
-                timerctl.timer[i].flags = TIMER_FLAGS_ALLOC; /* 表示这个timer又是有效的 */
-                fifo8_put(timerctl.timer[i].fifo, timerctl.timer[i].data);
-            }
-            else
-            {
-                if(timerctl.next > timerctl.timer[i].timeout)
-                {
-                    timerctl.next = timerctl.timer[i].timeout;
-                }
-            }
+            /* 如果进来，说明又没有到的定时器*/
+            break;
         }
+        /* 这都是超时的 */
+        timerctl.timers[i]->flags = TIMER_FLAGS_ALLOC;
+        fifo8_put(timerctl.timers[i]->fifo, timerctl.timers[i]->data);
     }
+
+    /* 前面的执行结果表明，前i个都已经被赋值为TIMER_FLAGS_ALLOC了，所以，处于动作中的定时器就应该减少i*/
+    /* 可以理解为0->i-1的timers都报废了 */
+    timerctl.using -= i;
+    for(j=0; j<timerctl.using; j++)
+    {
+        /* 进入这里，说明定时器都是处于动作中的 */
+        /* 把剩下的都往前面挪 */
+        timerctl.timers[j] = timerctl.timers[i + j]; 
+    }
+    if(timerctl.using > 0)
+    {
+        /* 不做骚操作，直接把第一个timeout拿给next */
+        timerctl.next = timerctl.timers[0]->timeout; 
+    }
+    else
+    {
+        timerctl.next = 0xffffffff;
+    }
+
     return;
 }
