@@ -194,15 +194,16 @@ void    sheet_refreshmap(SHTCTL *ctl, int vx0, int vy0, int vx1, int vy1, int h0
 typedef struct _TIMER_
 {
 	/* data */
-	unsigned int   timeout, flags; /* flag 用于记录各个定时器的状态 */
-	FIFO32        *fifo;
-	unsigned char *data;
+	struct _TIMER_ *next;
+	unsigned int    timeout, flags; /* flag 用于记录各个定时器的状态 */
+	FIFO32         *fifo;
+	unsigned char  *data;
 }TIMER;
 
 typedef struct _TIMERCTL_{
-	unsigned int  count, next, using; /* using :现在的定时器中有几个处于活动状态 */
+	unsigned int  count, next, using; /* next: 下一个超时的时间； using :现在的定时器中有几个处于活动状态 */
 	TIMER         timers0[MAX_TIMER];
-	TIMER        *timers[MAX_TIMER];
+	TIMER        *t0;
 }TIMERCTL;
 
 void   init_pit(void);
