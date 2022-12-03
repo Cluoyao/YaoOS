@@ -10,18 +10,27 @@ TIMERCTL timerctl;
 
 void init_pit(void)
 {
-    int i;
+    int    i;
+    TIMER *t;
     /* 中断周期变更 100hz */
     io_out8(PIT_CTRL, 0x34);
     io_out8(PIT_CNT0, 0x9c);
     io_out8(PIT_CNT0, 0x2e);
 
     timerctl.count   = 0;
-    timerctl.next    = 0xffffffff; /*  */
     for(i=0; i<MAX_TIMER; i++)
     {
         timerctl.timers0[i].flags = 0; /* 未使用状态 */
     }
+
+    t          = timer_alloc(); /* 取得一个定时器,这是哨兵！！！ */
+    t->timeout = 0xffffffff;
+    t->flags   = TIMER_FLAGS_USING;
+    t->next    = 0; /* 因为现在只有他一个，所以他的后面应该是0 */
+
+    timerctl.t0    = t; /* 因为现在只有哨兵，所以他就在最前面 */
+    timerctl.next  = 0xffffffff; /* 因为只有哨兵，所以下一个超时的时刻就是哨兵的时刻 */
+    timerctl.using = 1;
 
     return;
 }
@@ -52,7 +61,11 @@ void timer_init(TIMER *timer, FIFO32 *fifo, int data)
     timer->data = data;
     return;
 }
-
+/*
+    *建立链表
+    *timer:插入的定时器timer,
+    *timeout:设定该定时器的超时时间
+*/
 void timer_settime(TIMER *timer, unsigned int timeout)
 {
     int    e;
@@ -62,6 +75,7 @@ void timer_settime(TIMER *timer, unsigned int timeout)
     e = io_load_eflags(); /* 记录中断状态 */
     io_cli(); /* 禁止中断 */
     timerctl.using++;
+    /* 只有一个的情况，直接插入 */
     if(timerctl.using == 1)
     {
         /* 处于运行状态的定时器只有一个时 */
@@ -81,6 +95,7 @@ void timer_settime(TIMER *timer, unsigned int timeout)
         return;
     }
 
+    /* 再看链表中 */
     for(;;)
     {
         s = t;
@@ -99,7 +114,7 @@ void timer_settime(TIMER *timer, unsigned int timeout)
         }
     }
 
-    /* 插入到最后面的情况 */
+    /* 插入到链表最后面的情况 */
     s->next     = timer;
     timer->next = 0;
     io_store_eflags(e);
