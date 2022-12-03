@@ -3,7 +3,21 @@
 #include "bootpack.h"
 #include <stdio.h>
 
-
+/*
+ * x,y:显示位置的坐标
+ * c :字符颜色
+ * b :背景颜色
+ * s:字符串
+ * l:字符串长度
+ */
+void putfonts8_asc_sht(SHEET *sht, int x, int y, int c, int b, char *s, int l)
+{
+	/* 一个字符占8个bit，所以有l * 8 - 1*/
+	boxfill8(sht->buf, sht->bxsize, b, x, y, x + l * 8 - 1, y + 15); /* 用背景颜色擦除掉之前的内容 */
+	putfonts8_asc(sht->buf, sht->bxsize, x, y, c, s); /* 写上要写的内容 */
+	sheet_refresh(sht, x, y, x + l * 8, y + 16);
+	return;
+}
 
 #define MEMMAN_ADDR 0x003c0000  /* 栈及其他的空间里面*/
 
@@ -104,9 +118,10 @@ void HariMain(void)
 
 		count++;
 		sprintf(s, "%010d", count);
-		boxfill8(buf_win, 160, COL8_C6C6C6, 40, 28, 119, 43);
-		putfonts8_asc(buf_win, 160, 40, 28, COL8_000000, s);
-		sheet_refresh(sht_win, 40, 28, 120, 44);
+		putfonts8_asc_sht(sht_win, 40, 28, COL8_000000, COL8_C6C6C6, s, 80 - 1);
+		// boxfill8(buf_win, 160, COL8_C6C6C6, 40, 28, 119, 43);
+		// putfonts8_asc(buf_win, 160, 40, 28, COL8_000000, s);
+		// sheet_refresh(sht_win, 40, 28, 120, 44);
 
 		io_cli();
 		if (fifo8_status(&keyfifo) + fifo8_status(&mousefifo) 
@@ -121,9 +136,10 @@ void HariMain(void)
 				i = fifo8_get(&keyfifo);
 				io_sti();
 				sprintf(s, "%02X", i);
-				boxfill8(buf_back, binfo->scrnx, COL8_008484,  0, 16, 15, 31);
-				putfonts8_asc(buf_back, binfo->scrnx, 0, 16, COL8_FFFFFF, s);
-				sheet_refresh(sht_back, 0, 16, 16, 32);
+				putfonts8_asc_sht(sht_back, 0, 16, COL8_FFFFFF, COL8_008484, s, 15);
+				// boxfill8(buf_back, binfo->scrnx, COL8_008484,  0, 16, 15, 31);
+				// putfonts8_asc(buf_back, binfo->scrnx, 0, 16, COL8_FFFFFF, s);
+				// sheet_refresh(sht_back, 0, 16, 16, 32);
 			} 
 			else if (fifo8_status(&mousefifo) != 0) 
 			{
@@ -145,9 +161,10 @@ void HariMain(void)
 					{
 						s[2] = 'C';
 					}
-					boxfill8(buf_back, binfo->scrnx, COL8_008484, 32, 16, 32 + 15 * 8 - 1, 31);
-					putfonts8_asc(buf_back, binfo->scrnx, 32, 16, COL8_FFFFFF, s);
-					sheet_refresh(sht_back, 32, 16, 32 + 15 * 8, 32);
+					putfonts8_asc_sht(sht_back, 32, 16, COL8_FFFFFF, COL8_008484, s, 15);
+					// boxfill8(buf_back, binfo->scrnx, COL8_008484, 32, 16, 32 + 15 * 8 - 1, 31);
+					// putfonts8_asc(buf_back, binfo->scrnx, 32, 16, COL8_FFFFFF, s);
+					// sheet_refresh(sht_back, 32, 16, 32 + 15 * 8, 32);
 
 					mx += mdec.x;
 					my += mdec.y;
@@ -168,10 +185,11 @@ void HariMain(void)
 						my = binfo->scrny - 1;
 					}
 					sprintf(s, "(%3d, %3d)", mx, my);
-					boxfill8(buf_back, binfo->scrnx, COL8_008484, 0, 0, 79, 15); /* 擦除坐标 */
-					putfonts8_asc(buf_back, binfo->scrnx, 0, 0, COL8_FFFFFF, s); /* 显示坐标 */
-					/* 因为鼠标这个图层不需要重新绘制，所以是直接移动 */
-					sheet_refresh(sht_back, 0, 0, 80, 16);
+					putfonts8_asc_sht(sht_back, 0, 0, COL8_FFFFFF, COL8_008484, s, 80 - 1);
+					// boxfill8(buf_back, binfo->scrnx, COL8_008484, 0, 0, 79, 15); /* 擦除坐标 */
+					// putfonts8_asc(buf_back, binfo->scrnx, 0, 0, COL8_FFFFFF, s); /* 显示坐标 */
+					// /* 因为鼠标这个图层不需要重新绘制，所以是直接移动 */
+					// sheet_refresh(sht_back, 0, 0, 80, 16);
 					sheet_slide(sht_mouse, mx, my);
 				}
 			}
