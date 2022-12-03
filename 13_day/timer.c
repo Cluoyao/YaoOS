@@ -30,7 +30,6 @@ void init_pit(void)
 
     timerctl.t0    = t; /* 因为现在只有哨兵，所以他就在最前面 */
     timerctl.next  = 0xffffffff; /* 因为只有哨兵，所以下一个超时的时刻就是哨兵的时刻 */
-    timerctl.using = 1;
 
     return;
 }
@@ -74,15 +73,6 @@ void timer_settime(TIMER *timer, unsigned int timeout)
     timer->flags   = TIMER_FLAGS_USING;
     e = io_load_eflags(); /* 记录中断状态 */
     io_cli(); /* 禁止中断 */
-    timerctl.using++;
-    /* 只有一个的情况，直接插入 */
-    if(timerctl.using == 1)
-    {
-        /* 处于运行状态的定时器只有一个时 */
-        timerctl.t0 = timer;
-        timer->next        = 0; /* 没有下一个 */
-        io_store_eflags(e);
-    }
 
     /* 先看链表头 */
     t = timerctl.t0;
@@ -100,10 +90,6 @@ void timer_settime(TIMER *timer, unsigned int timeout)
     {
         s = t;
         t = t->next;  /* 链表顺序遍历 */
-        if(t == 0)
-        {
-            break; /* 遍历链表到末尾了 */
-        }
         if(timer->timeout <= t->timeout)
         {
             /* 插入到s,和t之间 */
@@ -113,13 +99,6 @@ void timer_settime(TIMER *timer, unsigned int timeout)
             return;
         }
     }
-
-    /* 插入到链表最后面的情况 */
-    s->next     = timer;
-    timer->next = 0;
-    io_store_eflags(e);
-
-    return;
 }
 
 void inthandler20(int *esp)
@@ -134,10 +113,11 @@ void inthandler20(int *esp)
         return; /* 如果还不到下一个时刻，就不执行后面的 */
     }
     timer = timerctl.t0; /* 首先把最前面的地址付给timer */
-    for(i = 0; i < timerctl.using; i++)
+    /* 链表遍历 */
+    for(;;)
     {
         /* timers的定时器都处于动作中，所以不确认flags */
-        if(timerctl.t0->timeout > timerctl.count)
+        if(timer->timeout > timerctl.count)
         {
             /* 如果进来，说明有没有到的定时器*/
             break;
@@ -148,21 +128,11 @@ void inthandler20(int *esp)
         timer = timer->next; /* 类似于链表的逻辑 */
     }
 
-    /* 前面的执行结果表明，前i个都已经被赋值为TIMER_FLAGS_ALLOC了，所以，处于动作中的定时器就应该减少i*/
-    /* 可以理解为0->i-1的timers都报废了 */
-    timerctl.using -= i;
     /* 新移位 */
     timerctl.t0 = timer;
 
-    if(timerctl.using > 0)
-    {
-        /* 不做骚操作，直接把第一个timeout拿给next */
-        timerctl.next = timerctl.t0->timeout; 
-    }
-    else
-    {
-        timerctl.next = 0xffffffff;
-    }
+    /* 不做骚操作，直接把第一个timeout拿给next */
+    timerctl.next = timer->timeout; 
 
     return;
 }

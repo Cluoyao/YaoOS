@@ -26,7 +26,7 @@ void HariMain(void)
 	struct BOOTINFO *binfo = (struct BOOTINFO *) ADR_BOOTINFO;
 	FIFO32           fifo;
 	char             s[40];
-	char             fifobuf[128];
+	int              fifobuf[128];
 
 	TIMER           *timer, *timer2, *timer3;
 	int              mx, my, i;

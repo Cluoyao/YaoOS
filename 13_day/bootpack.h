@@ -201,7 +201,7 @@ typedef struct _TIMER_
 }TIMER;
 
 typedef struct _TIMERCTL_{
-	unsigned int  count, next, using; /* next: 下一个超时的时间； using :现在的定时器中有几个处于活动状态 */
+	unsigned int  count, next; /* next: 下一个超时的时间；*/
 	TIMER         timers0[MAX_TIMER];
 	TIMER        *t0;
 }TIMERCTL;
