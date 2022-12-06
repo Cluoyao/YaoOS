@@ -28,10 +28,17 @@ struct FIFO8 {
 	unsigned char *buf;
 	int p, q, size, free, flags;
 };
-void fifo8_init(struct FIFO8 *fifo, int size, unsigned char *buf);
-int fifo8_put(struct FIFO8 *fifo, unsigned char data);
-int fifo8_get(struct FIFO8 *fifo);
-int fifo8_status(struct FIFO8 *fifo);
+
+/* fifo.c */
+typedef struct _FIFO32_ {
+	int *buf;
+	int  p, q, size, free, flags;
+}FIFO32;
+
+void fifo32_init(FIFO32 *fifo, int size, int *buf);
+int  fifo32_put(FIFO32 *fifo, int data);
+int  fifo32_get(FIFO32 *fifo);
+int  fifo32_status(FIFO32 *fifo);
 
 /* graphic.c */
 void init_palette(void);
@@ -41,24 +48,24 @@ void init_screen8(char *vram, int x, int y);
 void putfont8(char *vram, int xsize, int x, int y, char c, char *font);
 void putfonts8_asc(char *vram, int xsize, int x, int y, char c, unsigned char *s);
 void init_mouse_cursor8(char *mouse, char bc);
-void putblock8_8(char *vram, int vxsize, int pxsize,
-	int pysize, int px0, int py0, char *buf, int bxsize);
-#define COL8_000000		0
-#define COL8_FF0000		1
-#define COL8_00FF00		2
-#define COL8_FFFF00		3
-#define COL8_0000FF		4
-#define COL8_FF00FF		5
-#define COL8_00FFFF		6
-#define COL8_FFFFFF		7
-#define COL8_C6C6C6		8
-#define COL8_840000		9
-#define COL8_008400		10
-#define COL8_848400		11
-#define COL8_000084		12
-#define COL8_840084		13
-#define COL8_008484		14
-#define COL8_848484		15
+void putblock8_8(char *vram, int vxsize, int pxsize, int pysize, int px0, int py0, char *buf, int bxsize);
+
+#define COL8_000000		0    /*  0:黑 */
+#define COL8_FF0000		1    /*  1:梁红 */
+#define COL8_00FF00		2    /*  2:亮绿 */
+#define COL8_FFFF00		3    /*  3:亮黄 */
+#define COL8_0000FF		4    /*  4:亮蓝 */
+#define COL8_FF00FF		5    /*  5:亮紫 */
+#define COL8_00FFFF		6    /*  6:浅亮蓝 */
+#define COL8_FFFFFF		7    /*  7:白 */
+#define COL8_C6C6C6		8    /*  8:亮灰 */
+#define COL8_840000		9    /*  9:暗红 */
+#define COL8_008400		10   /* 10:暗绿 */  
+#define COL8_848400		11   /* 11:暗黄 */
+#define COL8_000084		12   /* 12:暗青 */
+#define COL8_840084		13   /* 13:暗紫 */
+#define COL8_008484		14   /* 14:浅暗蓝 */
+#define COL8_848484		15   /* 15:暗灰 */
 
 /* dsctbl.c */
 struct SEGMENT_DESCRIPTOR {
@@ -103,8 +110,8 @@ void inthandler27(int *esp);
 /* keyboard.c */
 void inthandler21(int *esp);
 void wait_KBC_sendready(void);
-void init_keyboard(void);
-extern struct FIFO8 keyfifo;
+void init_keyboard(FIFO32 *fifo, int data0);
+
 #define PORT_KEYDAT		0x0060
 #define PORT_KEYCMD		0x0064
 
@@ -114,9 +121,8 @@ struct MOUSE_DEC {
 	int x, y, btn;
 };
 void inthandler2c(int *esp);
-void enable_mouse(struct MOUSE_DEC *mdec);
-int mouse_decode(struct MOUSE_DEC *mdec, unsigned char dat);
-extern struct FIFO8 mousefifo;
+void enable_mouse(FIFO32 *fifo, int data0, struct MOUSE_DEC *mdec);
+int  mouse_decode(struct MOUSE_DEC *mdec, unsigned char dat);
 
 
 /* memory.c */
@@ -188,20 +194,21 @@ void    sheet_refreshmap(SHTCTL *ctl, int vx0, int vy0, int vx1, int vy1, int h0
 typedef struct _TIMER_
 {
 	/* data */
-	unsigned int   timeout, flags; /* flag 用于记录各个定时器的状态 */
-	struct   FIFO *fifo;
-	unsigned char *data;
+	struct _TIMER_ *next;
+	unsigned int    timeout, flags; /* flag 用于记录各个定时器的状态 */
+	FIFO32         *fifo;
+	unsigned char  *data;
 }TIMER;
 
 typedef struct _TIMERCTL_{
-	unsigned int  count, next, using; /* using :现在的定时器中有几个处于活动状态 */
+	unsigned int  count, next; /* next: 下一个超时的时间；*/
 	TIMER         timers0[MAX_TIMER];
-	TIMER        *timers[MAX_TIMER];
+	TIMER        *t0;
 }TIMERCTL;
 
 void   init_pit(void);
-void   settimer(unsigned int timeout, struct FIFO8 *fifo, unsigned char data);
+void   settimer(unsigned int timeout, FIFO32 *fifo, unsigned char data);
 TIMER *timer_alloc(void);
 void   timer_free(TIMER *timer);
-void   timer_init(TIMER *timer, struct FIFO8 *fifo, unsigned char data);
+void   timer_init(TIMER *timer, FIFO32 *fifo, int data);
 void   timer_settime(TIMER *timer, unsigned int timeout);

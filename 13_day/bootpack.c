@@ -194,7 +194,7 @@ void HariMain(void)
 				timer_settime(timer3, 50); /* 继续设定0.5s的定时，让其一闪一闪亮晶晶 */
 				sheet_refresh(sht_back, 8, 96, 16, 112);
 			}
-; 
+ 
 		}
 	}
 }
