@@ -19,6 +19,21 @@ void putfonts8_asc_sht(SHEET *sht, int x, int y, int c, int b, char *s, int l)
 	return;
 }
 
+void make_textbox8(SHEET *sht, int x0, int y0, int sx, int sy, int c)
+{
+	int x1 = x0 + sx, y1 = y0 + sy;
+	boxfill8(sht->buf, sht->bxsize, COL8_848484, x0 - 2, y0 - 3, x1 + 1, y0 - 3);
+	boxfill8(sht->buf, sht->bxsize, COL8_848484, x0 - 3, y0 - 3, x0 - 3, y1 + 1);
+	boxfill8(sht->buf, sht->bxsize, COL8_FFFFFF, x0 - 3, y1 + 2, x1 + 1, y1 + 2);
+	boxfill8(sht->buf, sht->bxsize, COL8_FFFFFF, x1 + 2, y0 - 3, x1 + 2, y1 + 2);
+	boxfill8(sht->buf, sht->bxsize, COL8_000000, x0 - 1, y0 - 2, x1 + 0, y0 - 2);
+	boxfill8(sht->buf, sht->bxsize, COL8_000000, x0 - 2, y0 - 2, x0 - 2, y1 + 0);
+	boxfill8(sht->buf, sht->bxsize, COL8_C6C6C6, x0 - 2, y1 + 1, x1 + 0, y1 + 1);
+	boxfill8(sht->buf, sht->bxsize, COL8_C6C6C6, x1 + 1, y0 - 2, x1 + 1, y1 + 1);
+	boxfill8(sht->buf, sht->bxsize, c, x0 - 1, y0 - 1, x1 + 0, y1 + 0);
+	return;
+}
+
 #define MEMMAN_ADDR 0x003c0000  /* 栈及其他的空间里面*/
 
 void HariMain(void)
@@ -29,7 +44,7 @@ void HariMain(void)
 	int              fifobuf[128];
 
 	TIMER           *timer, *timer2, *timer3;
-	int              mx, my, i;
+	int              mx, my, i, cursor_x, cursor_c;
 	struct MOUSE_DEC mdec;
 
 	unsigned int     memtotal, count = 0;
@@ -37,6 +52,16 @@ void HariMain(void)
 	SHTCTL          *shtctl;
 	SHEET           *sht_back, *sht_mouse, *sht_win;
 	unsigned char   *buf_back, buf_mouse[256], *buf_win;
+
+	static char      keytable[0x54] = 
+	{
+		0, 0, '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', '^', 0, 0,
+		'Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P', '@', '[', 0, 0, 'A', 'S',
+		'D', 'F', 'G', 'H', 'J', 'K', 'L', ';', ':', 0, 0, ']', 'Z', 'X', 'C', 'V',
+		'B', 'N', 'M', ',', '.', '/', 0, '*', 0, ' ', 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, '7', '8', '9', '-', '4', '5', '6', '+', '1',
+		'2', '3', '0', '.'
+	};
 
 	init_gdtidt();
 	init_pic();
@@ -82,6 +107,10 @@ void HariMain(void)
 	init_mouse_cursor8(buf_mouse, 99); /* 背景色号99 */
 	make_window8(buf_win, 160, 52, "Window");
 
+	make_textbox8(sht_win, 8, 28, 144, 16, COL8_FFFFFF);
+	cursor_x = 8;
+	cursor_c = COL8_FFFFFF;
+
 	/* 从左上角(0,0)点开始绘制显示界面 */
 	sheet_slide(sht_back, 0, 0);
 
@@ -123,10 +152,23 @@ void HariMain(void)
 			{
 				sprintf(s, "%02X", i - 256);
 				putfonts8_asc_sht(sht_back, 0, 16, COL8_FFFFFF, COL8_008484, s, 2);
-				if (i == 0x1e + 256) 
+				if (i < 256 + 0x54) 
 				{
-					putfonts8_asc_sht(sht_win, 40, 28, COL8_000000, COL8_008484, "A", 1);
+					if(keytable[i - 256] != 0 && cursor_x < 144) /* 一般字符 */
+					{
+						s[0] = keytable[i - 256];
+						s[1] = 0;
+						putfonts8_asc_sht(sht_win, cursor_x, 28, COL8_000000, COL8_FFFFFF, s, 1);
+						cursor_x += 8;
+					}
 				}
+				if(i == 256 + 0x0e && cursor_x > 8)
+				{
+					putfonts8_asc_sht(sht_win, cursor_x, 28, COL8_000000, COL8_FFFFFF, " ", 1);
+					cursor_x -= 8;
+				}
+				boxfill8(sht_win->buf, sht_win->bxsize, cursor_c, cursor_x, 28, cursor_x + 7, 43); /* 擦除 */
+				sheet_refresh(sht_win, cursor_x, 28, cursor_x + 8, 44);
 			} 
 			else if (512 <= i && i <= 767) /* 鼠标数据 */
 			{
@@ -169,6 +211,11 @@ void HariMain(void)
 					sprintf(s, "(%3d, %3d)", mx, my);
 					putfonts8_asc_sht(sht_back, 0, 0, COL8_FFFFFF, COL8_008484, s, 10);
 					sheet_slide(sht_mouse, mx, my);
+					if((mdec.btn & 0x01) != 0)
+					{
+						/* 按下左键，移动sht_win,因为原点在左上角，-80是将窗口起点相对鼠标往左偏，-8是往上偏 */
+						sheet_slide(sht_win, mx - 80, my - 8);
+					}
 				}
 			}
 			else if(i == 10)
@@ -182,21 +229,24 @@ void HariMain(void)
 				putfonts8_asc_sht(sht_back, 0, 80, COL8_FFFFFF, COL8_008484, "3[Sec]",  6);
 				count = 0;
 			}
+			else if(i <= 1)
+			{
+				if(i != 0)
+				{
+					timer_init(timer3, &fifo, 0); /* 设置为0 */
+					cursor_c = COL8_000000;
+				}
+				else
+				{
+					timer_init(timer3, &fifo, 1); /* 设置为0 */
+					cursor_c = COL8_FFFFFF;
+				}
 
-			else if(i == 1)
-			{
-				timer_init(timer3, &fifo, 0); /* 设置为0 */
-				boxfill8(buf_back, binfo->scrnx, COL8_FF00FF, 8, 96, 15, 111); /* 显示光标 */
 				timer_settime(timer3, 50); /* 继续设定0.5s的定时，让其一闪一闪亮晶晶 */
-				sheet_refresh(sht_back, 8, 96, 16, 112);
+				boxfill8(sht_win->buf, sht_win->bxsize, cursor_c, cursor_x, 28, cursor_x + 7, 43); /* 显示光标 */
+				sheet_refresh(sht_win, cursor_x, 28, cursor_x + 8, 44);
 			}
-			else if(i == 0)
-			{
-				timer_init(timer3, &fifo, 1); /* 设置为1 */
-				boxfill8(buf_back, binfo->scrnx, COL8_008484, 8, 96, 15, 111); /* 擦除 */
-				timer_settime(timer3, 50); /* 继续设定0.5s的定时，让其一闪一闪亮晶晶 */
-				sheet_refresh(sht_back, 8, 96, 16, 112);
-			}
+
  
 		}
 	}
