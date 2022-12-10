@@ -38,15 +38,24 @@ void task_b_main()
 {
 	FIFO32 fifo;
 	TIMER *timer_ts;
-	int    i, fifobuf[128];
+	int    i, fifobuf[128], count = 0;
+	char   s[11];
+	SHEET *sht_back;
+
 	fifo32_init(&fifo, 128, fifobuf);
 	timer_ts = timer_alloc();
 	timer_init(timer_ts, &fifo, 1);
 	timer_settime(timer_ts, 2);
 
+	sht_back = (SHEET *)*((int *)0x0fec);
+
+
 
 	for(;;)
 	{
+		count++;
+		sprintf(s, "%10d", count);
+		putfonts8_asc_sht(sht_back, 0, 144, COL8_FFFFFF, COL8_008484, s, 10);
 		io_cli(); /* 先禁止中断发生，获取信息 */
 		if(fifo32_status(&fifo) == 0)
 		{
@@ -58,7 +67,7 @@ void task_b_main()
 			io_sti(); /* 如果前面的if不成立，就开放中断，允许中断发生 */
 			if(i == 1)
 			{
-				farjmp(0, 3 * 8);
+				farjmp(0, 3 * 8); /* 切task_a */
 				timer_settime(timer_ts, 2);
 			}
 		}
@@ -166,6 +175,8 @@ void HariMain(void)
 	sheet_setbuf(sht_back,  buf_back,  binfo->scrnx, binfo->scrny, -1); /* 没有透明色 */
 	sheet_setbuf(sht_mouse, buf_mouse, 16, 16, 99); /* 透明色号99 */
 	sheet_setbuf(sht_win, buf_win, 160, 52, -1);
+
+	*((int *)0x0fec) = (int)sht_back;
 
 	/* 填充图层中每个像素的点上的颜色信息 */
 	init_screen8(buf_back, binfo->scrnx, binfo->scrny);
@@ -291,7 +302,7 @@ void HariMain(void)
 			else if(i == 10)
 			{
 				putfonts8_asc_sht(sht_back, 0, 64, COL8_FFFFFF, COL8_008484, "10[Sec]", 7);
-				farjmp(0, 4 * 8);
+				farjmp(0, 4 * 8); /* 切 task_b */
 				//sprintf(s, "%010d", count);
 				//putfonts8_asc_sht(sht_win, 40, 28, COL8_000000, COL8_C6C6C6, s, 10);
 			}
