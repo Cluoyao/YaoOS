@@ -223,5 +223,5 @@ typedef struct _TSS32_
 	int ldtr, iomap; /* 任务状态记录 */
 }TSS32; /* 104字节 */
 
-void taskswitch4();
-void taskswitch3();
+
+void farjmp(int eip, int cs);

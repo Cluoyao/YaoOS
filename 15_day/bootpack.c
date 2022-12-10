@@ -37,12 +37,12 @@ void make_textbox8(SHEET *sht, int x0, int y0, int sx, int sy, int c)
 void task_b_main()
 {
 	FIFO32 fifo;
-	TIMER *timer;
+	TIMER *timer_ts;
 	int    i, fifobuf[128];
 	fifo32_init(&fifo, 128, fifobuf);
-	timer = timer_alloc();
-	timer_init(timer, &fifo, 1);
-	timer_settime(timer, 500);
+	timer_ts = timer_alloc();
+	timer_init(timer_ts, &fifo, 1);
+	timer_settime(timer_ts, 2);
 
 
 	for(;;)
@@ -58,7 +58,8 @@ void task_b_main()
 			io_sti(); /* 如果前面的if不成立，就开放中断，允许中断发生 */
 			if(i == 1)
 			{
-				taskswitch3();
+				farjmp(0, 3 * 8);
+				timer_settime(timer_ts, 2);
 			}
 		}
 
@@ -74,7 +75,7 @@ void HariMain(void)
 	char                       s[40];
 	int                        fifobuf[128];
    
-	TIMER                     *timer, *timer2, *timer3;
+	TIMER                     *timer, *timer2, *timer3, *timer_ts;
 	int                        mx, my, i, cursor_x, cursor_c;
 	struct MOUSE_DEC           mdec;
    
@@ -146,6 +147,10 @@ void HariMain(void)
 	timer_init(timer3, &fifo, 1);
 	timer_settime(timer3, 50);
 
+	timer_ts = timer_alloc();
+	timer_init(timer_ts, &fifo, 2);
+	timer_settime(timer_ts, 2); /* 设置0.02ms的定时器 */
+
 	memtotal = memtest(0x00400000, 0xbfffffff);
 	memman_init(memman);
 	memman_free(memman, 0x00001000, 0x0009e000); /* 0x00001000 - 0x0009efff */
@@ -198,7 +203,7 @@ void HariMain(void)
 
 	for (;;) 
 	{
-		io_cli();
+		io_cli(); /* 关闭中断 */
 		if (fifo32_status(&fifo) == 0) 
 		{
 			io_stihlt();
@@ -207,6 +212,11 @@ void HariMain(void)
 		{
 			i = fifo32_get(&fifo);
 			io_sti();
+			if(i == 2)
+			{
+				farjmp(0, 4 * 8); /* 跳转到4号任务 */
+				timer_settime(timer_ts, 2);
+			}
 
 			if (256 <= i && i <= 511) /* 键盘数据 */
 			{
@@ -281,7 +291,7 @@ void HariMain(void)
 			else if(i == 10)
 			{
 				putfonts8_asc_sht(sht_back, 0, 64, COL8_FFFFFF, COL8_008484, "10[Sec]", 7);
-				taskswitch4(); /* 做任务切换，而非函数调用 */
+				farjmp(0, 4 * 8);
 				//sprintf(s, "%010d", count);
 				//putfonts8_asc_sht(sht_win, 40, 28, COL8_000000, COL8_C6C6C6, s, 10);
 			}
