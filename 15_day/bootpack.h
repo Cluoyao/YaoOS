@@ -221,6 +221,7 @@ typedef struct _TSS32_
 	int eip, eflags, eax, ecx, edx, ebx, esp, ebp, esi, edi; /* 32位寄存器 */
 	int es, cs, ss, ds, fs, gs; /* 16位寄存器 */
 	int ldtr, iomap; /* 任务状态记录 */
-}TSS32;
+}TSS32; /* 104字节 */
 
 void taskswitch4();
+void taskswitch3();

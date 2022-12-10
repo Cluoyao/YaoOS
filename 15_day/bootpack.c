@@ -36,9 +36,32 @@ void make_textbox8(SHEET *sht, int x0, int y0, int sx, int sy, int c)
 
 void task_b_main()
 {
+	FIFO32 fifo;
+	TIMER *timer;
+	int    i, fifobuf[128];
+	fifo32_init(&fifo, 128, fifobuf);
+	timer = timer_alloc();
+	timer_init(timer, &fifo, 1);
+	timer_settime(timer, 500);
+
+
 	for(;;)
 	{
-		io_hlt();
+		io_cli(); /* 先禁止中断发生，获取信息 */
+		if(fifo32_status(&fifo) == 0)
+		{
+			io_stihlt(); /* 刚发现，如果只用io_hlt，会让CPU直接挂起，不工作了，操作系统也不运行了，哈哈*/
+		}
+		else
+		{
+			i = fifo32_get(&fifo);
+			io_sti(); /* 如果前面的if不成立，就开放中断，允许中断发生 */
+			if(i == 1)
+			{
+				taskswitch3();
+			}
+		}
+
 	}
 }
 
@@ -100,8 +123,9 @@ void HariMain(void)
 	init_pic();
 	io_sti(); /* IDT/PIC的初始化已经完成，于是开放CPU的中断 */
 
-	set_segmdesc(gdt + 3, 103, (int)&tss_a, AR_TSS32);
-	set_segmdesc(gdt + 4, 103, (int)&tss_b, AR_TSS32);
+	set_segmdesc(gdt + 3, 103, (int)&tss_a, AR_TSS32); /* 任务 a */
+	set_segmdesc(gdt + 4, 103, (int)&tss_b, AR_TSS32); /* 任务 b */
+	load_tr(3 * 8); /* 先让其当前运行GDTw为3的任务 */
 
 	fifo32_init(&fifo, 128, fifobuf);
 	init_pit();
@@ -257,7 +281,7 @@ void HariMain(void)
 			else if(i == 10)
 			{
 				putfonts8_asc_sht(sht_back, 0, 64, COL8_FFFFFF, COL8_008484, "10[Sec]", 7);
-				taskswitch4();
+				taskswitch4(); /* 做任务切换，而非函数调用 */
 				//sprintf(s, "%010d", count);
 				//putfonts8_asc_sht(sht_win, 40, 28, COL8_000000, COL8_C6C6C6, s, 10);
 			}
