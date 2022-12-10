@@ -34,38 +34,41 @@ void make_textbox8(SHEET *sht, int x0, int y0, int sx, int sy, int c)
 	return;
 }
 
-void task_b_main()
+void task_b_main(SHEET *sht_back)
 {
 	FIFO32 fifo;
-	TIMER *timer_ts;
+	TIMER *timer_ts, *timer_put;
 	int    i, fifobuf[128], count = 0;
-	char   s[11];
-	SHEET *sht_back;
+	char   s[12];
 
 	fifo32_init(&fifo, 128, fifobuf);
 	timer_ts = timer_alloc();
-	timer_init(timer_ts, &fifo, 1);
+	timer_init(timer_ts, &fifo, 2);
 	timer_settime(timer_ts, 2);
 
-	sht_back = (SHEET *)*((int *)0x0fec);
-
-
+	timer_put = timer_alloc();
+	timer_init(timer_put, &fifo, 1);
+	timer_settime(timer_put, 1);
 
 	for(;;)
 	{
 		count++;
-		sprintf(s, "%10d", count);
-		putfonts8_asc_sht(sht_back, 0, 144, COL8_FFFFFF, COL8_008484, s, 10);
 		io_cli(); /* 先禁止中断发生，获取信息 */
 		if(fifo32_status(&fifo) == 0)
 		{
-			io_stihlt(); /* 刚发现，如果只用io_hlt，会让CPU直接挂起，不工作了，操作系统也不运行了，哈哈*/
+			io_sti(); /* 刚发现，如果只用io_hlt，会让CPU直接挂起，不工作了，操作系统也不运行了，哈哈*/
 		}
 		else
 		{
 			i = fifo32_get(&fifo);
 			io_sti(); /* 如果前面的if不成立，就开放中断，允许中断发生 */
 			if(i == 1)
+			{
+				sprintf(s, "%11d", count);
+				putfonts8_asc_sht(sht_back, 0, 144, COL8_FFFFFF, COL8_008484, s, 11);
+				timer_settime(timer_put, 1);
+			}
+			else if(i == 2)
 			{
 				farjmp(0, 3 * 8); /* 切task_a */
 				timer_settime(timer_ts, 2);
@@ -95,7 +98,7 @@ void HariMain(void)
 	unsigned char             *buf_back, buf_mouse[256], *buf_win;
 	TSS32                      tss_a, tss_b;
 	struct SEGMENT_DESCRIPTOR *gdt = (struct SEGMENT_DESCRIPTOR *)ADR_GDT;
-	int                        task_b_esp = memman_alloc_4k(memman, 64 * 1024) + 64 * 1024; /* 指向栈尾，塞入之后地址逐渐减小 */
+	int                        task_b_esp = memman_alloc_4k(memman, 64 * 1024) + 64 * 1024 - 8; /* 指向栈尾，塞入之后地址逐渐减小 */
 
 	static char      keytable[0x54] = 
 	{
@@ -176,7 +179,7 @@ void HariMain(void)
 	sheet_setbuf(sht_mouse, buf_mouse, 16, 16, 99); /* 透明色号99 */
 	sheet_setbuf(sht_win, buf_win, 160, 52, -1);
 
-	*((int *)0x0fec) = (int)sht_back;
+	*((int *)(task_b_esp + 4)) = (int)sht_back;
 
 	/* 填充图层中每个像素的点上的颜色信息 */
 	init_screen8(buf_back, binfo->scrnx, binfo->scrny);
