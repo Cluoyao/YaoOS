@@ -223,5 +223,9 @@ typedef struct _TSS32_
 	int ldtr, iomap; /* 任务状态记录 */
 }TSS32; /* 104字节 */
 
+extern TIMER *mt_timer;
+extern int    mt_tr;
 
 void farjmp(int eip, int cs);
+void mt_init(void);
+void mt_taskswitch(void);

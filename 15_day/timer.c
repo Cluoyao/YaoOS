@@ -101,8 +101,10 @@ void timer_settime(TIMER *timer, unsigned int timeout)
     }
 }
 
+/* 接受定时器中断的函数 */
 void inthandler20(int *esp)
 {
+    char   ts = 0; /* 仅作为一个标志位来使用，没啥大道理 */
     int    i, j;
     TIMER *timer;
     io_out8(PIC0_OCW2, 0x60); /* 把 IRQ-00信号接收完了的信息通知给PIC */
@@ -124,7 +126,15 @@ void inthandler20(int *esp)
         }
         /* 这都是超时的 */
         timer->flags = TIMER_FLAGS_ALLOC;
-        fifo32_put(timer->fifo, timer->data);
+        if(timer != mt_timer)
+        {
+            fifo32_put(timer->fifo, timer->data);
+        }
+        else
+        {
+            ts = 1; /* mt_timer 超时时间*/
+        }
+        
         timer = timer->next; /* 类似于链表的逻辑 */
     }
 
@@ -133,6 +143,11 @@ void inthandler20(int *esp)
 
     /* 不做骚操作，直接把第一个timeout拿给next */
     timerctl.next = timer->timeout; 
+
+    if(ts != 0)
+    {
+        mt_taskswitch();
+    }
 
     return;
 }
