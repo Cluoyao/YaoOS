@@ -37,7 +37,7 @@ int fifo32_put(FIFO32 *fifo, int data)
 	{
 		if(fifo->task->flags != 2) /* 2是正在使用，1是不使用（休眠状态），*/
 		{
-			task_run(fifo->task); /* 让任务工作起来 */
+			task_run(fifo->task, 0); /* 让任务工作起来(将任务唤醒) */
 		}
 	}
 

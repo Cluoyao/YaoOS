@@ -235,6 +235,7 @@ extern int    mt_tr;
 typedef struct _TASK_
 {
 	int     sel, flags;   /* sel用来存放GDT的编号 */
+	int     priority;
 	TSS32   tss;
 }TASK;
 
@@ -250,6 +251,6 @@ typedef struct _TASKCTL_
 
 TASK *task_init(MEMMAN *memman);
 TASK *task_alloc();
-void  task_run(TASK *task);
+void  task_run(TASK *task, int priority);
 void  task_switch();
 void  task_sleep(TASK *task);

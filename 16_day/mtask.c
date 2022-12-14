@@ -18,12 +18,13 @@ TASK *task_init(MEMMAN *memman)
     }
     task              = task_alloc();
     task->flags       = 2; /* 活动中的标志 */
+    task->priority    = 2; /* 初始值都设置为0.02s */
     taskctl->running  = 1;
     taskctl->now      = 0; 
     taskctl->tasks[0] = task; /* 管理任务的任务 */
     load_tr(task->sel);
     task_timer = timer_alloc();
-    timer_settime(task_timer, 2);
+    timer_settime(task_timer, task->priority);
     return task;
 }
 
@@ -57,26 +58,36 @@ TASK *task_alloc()
     return 0; /* 没找到，返回空 */
 }
 
-void task_run(TASK *task)
+void task_run(TASK *task, int priority)
 {
-    task->flags = 2; /* 活动中的标志 */
-    taskctl->tasks[taskctl->running] = task; /* 这在任务调度里面是不是算准备就绪了？ */
-    taskctl->running++;
+    /* 当为0时不改变任务优先级 */
+    if(priority > 0)
+    {
+        task->priority = priority;
+    }
+    if(task->flags != 2)
+    {
+        task->flags = 2; /* 活动中的标志 */
+        taskctl->tasks[taskctl->running] = task; /* 这在任务调度里面是不是算准备就绪了？ */
+        taskctl->running++;
+    }
+
     return;
 }
 
 void task_switch()
 {
-    timer_settime(task_timer, 2);
+    TASK *task;
+    taskctl->now++; /* 直接切当前正在运行的任务的下一个任务 */
+    if(taskctl->now == taskctl->running) /* 如果下一个任务达到活动任务的边界，起始是0，如果现在有两个活动任务，now会是0,1,自增后到2，此刻就必须重置 */
+    {
+        taskctl->now = 0; /* 切换到任务调度本身（相当于重置） */
+    }
+    task = taskctl->tasks[taskctl->now];
+    timer_settime(task_timer, task->priority);
     if(taskctl->running >= 2)
     {
-        taskctl->now++; /* 直接切当前正在运行的任务的下一个任务 */
-        if(taskctl->now == taskctl->running) /* 如果下一个任务达到活动任务的边界，起始是0，如果现在有两个活动任务，now会是0,1,自增后到2，此刻就必须重置 */
-        {
-            taskctl->now = 0; /* 切换到任务调度本身（相当于重置） */
-        }
-
-        farjmp(0, taskctl->tasks[taskctl->now]->sel);
+        farjmp(0, task->sel);
     }
     return;
 }
