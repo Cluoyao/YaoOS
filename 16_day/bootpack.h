@@ -218,8 +218,10 @@ void   timer_settime(TIMER *timer, unsigned int timeout);
 void   inthandler20(int *esp);
 
 /* multitask */
-#define MAX_TASKS     1000
-#define TASK_GDT0     3
+#define MAX_TASKS      1000
+#define TASK_GDT0      3
+#define MAX_TASKS_LV   100
+#define MAX_TASKLEVELS 10
 
 typedef struct _TSS32_
 {
@@ -235,16 +237,23 @@ extern int    mt_tr;
 typedef struct _TASK_
 {
 	int     sel, flags;   /* sel用来存放GDT的编号 */
-	int     priority;
+	int     level, priority;
 	TSS32   tss;
 }TASK;
 
-typedef struct _TASKCTL_
+typedef struct _TASKLEVEL_
 {
 	int   running; /* 正在运行的任务数量 */
 	int   now;     /* 当前正在运行的是哪个任务 */
-	TASK *tasks[MAX_TASKS];   /* 存放正在运行的任务 */
-	TASK  tasks0[MAX_TASKS];
+	TASK *tasks[MAX_TASKS_LV];   /* 存放正在运行的任务 */
+}TASKLEVEL;
+
+typedef struct _TASKCTL_
+{
+	int        now_lv; /* 现在活动中的LEVEL*/
+	char       lv_change; /* 在下次任务切换时是否需要改变LEVEL */
+	TASKLEVEL *level[MAX_TASKLEVELS];  
+	TASK       tasks0[MAX_TASKS];
 }TASKCTL;
 
 
@@ -254,3 +263,5 @@ TASK *task_alloc();
 void  task_run(TASK *task, int priority);
 void  task_switch();
 void  task_sleep(TASK *task);
+void  task_add(TASK *task);
+void  task_switchsub();

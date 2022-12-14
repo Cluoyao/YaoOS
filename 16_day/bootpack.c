@@ -61,6 +61,7 @@ void HariMain(void)
 	shtctl    = shtctl_init(memman, binfo->vram, binfo->scrnx, binfo->scrny);
 	task_a    = task_init(memman);
 	fifo.task = task_a;
+	task_run(task_a, 10);
 
 	sht_back  = sheet_alloc(shtctl); /* 从管理单元中拿一个图层出来用，作为背景图层 */
 	buf_back  = (unsigned char *)memman_alloc_4k(memman, binfo->scrnx * binfo->scrny); /* 分配图层缓存，存放背景信息 */
