@@ -1,6 +1,7 @@
 /*初始化关系 */
 
 #include "bootpack.h"
+#include <stdio.h>
 
 void init_pic(void)
 /* PIC初始化 */
@@ -24,7 +25,6 @@ void init_pic(void)
 	return;
 }
 
-#define PORT_KEYDAT		0x0060
 
 void inthandler27(int *esp)
 /* PIC0中断的不完整策略 */

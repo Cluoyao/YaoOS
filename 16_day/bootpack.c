@@ -61,7 +61,7 @@ void HariMain(void)
 	shtctl    = shtctl_init(memman, binfo->vram, binfo->scrnx, binfo->scrny);
 	task_a    = task_init(memman);
 	fifo.task = task_a;
-	task_run(task_a, 10);
+	task_run(task_a, 1, 0); /* task_a设置为level1 */
 
 	sht_back  = sheet_alloc(shtctl); /* 从管理单元中拿一个图层出来用，作为背景图层 */
 	buf_back  = (unsigned char *)memman_alloc_4k(memman, binfo->scrnx * binfo->scrny); /* 分配图层缓存，存放背景信息 */
@@ -87,7 +87,7 @@ void HariMain(void)
 		task_b[i]->tss.fs  = 1 * 8;
 		task_b[i]->tss.gs  = 1 * 8;
 		*((int *)(task_b[i]->tss.esp + 4)) = (int)sht_win_b[i]; /* 现在显示在窗口中,task_b的入参数sheet */
-		task_run(task_b[i], i+1);
+		task_run(task_b[i], 2, i+1);
 	}
 
 	/* sht_win */

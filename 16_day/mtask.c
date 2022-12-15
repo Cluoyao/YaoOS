@@ -4,6 +4,72 @@
 TASKCTL *taskctl;
 TIMER   *task_timer;
 
+/* 返回现在活动中的TASK的内存地址 */
+TASK *task_now()
+{   
+    TASKLEVEL *tl = &taskctl->level[taskctl->now_lv];
+    return tl->tasks[tl->now];
+}
+
+void  task_add(TASK *task)
+{
+    TASKLEVEL *tl          = &taskctl->level[task->level]; /* 先找到这个任务对应的level级 */
+    tl->tasks[tl->running] = task; /* 追加到tasks列表的末尾 */
+    tl->running++; /* 数量自增 */
+    task->flags = 2; /* 改为活动中,为何进来就要编程任务中呢？因为主要是task_run在调用，别被名字误解了 */
+    return;
+}
+
+void task_remove(TASK *task)
+{
+    int i;
+    TASKLEVEL *tl = &taskctl->level[task->level]; /* 先看这个任务属于哪个level */
+
+    /* 在该level下寻找task所在的位置 */
+    for(i = 0; i < tl->running; i++)
+    {
+        if(tl->tasks[i] == task)
+        {
+            break;
+        }
+    }
+
+    tl->running--; /* 首先数量上减一 */
+    if(i < tl->now)
+    {
+        tl->now--; /* 需要移动成员，此时的now应该往前移一个 */
+    }
+    if(tl->now >= tl->running)
+    {
+        /* 如果now的值出现异常，则进行修正 */
+        tl->now = 0;
+    }
+    task->flags = 1; /* 休眠中 */
+    /* 移动中 */
+    for(; i < tl->running; i++)
+    {
+        tl->tasks[i] = tl->tasks[i + 1];
+    }
+
+    return;
+}
+
+void  task_switchsub()
+{
+    int i;
+    /* 寻找最上层的LEVEL */
+    for(i = 0; i < MAX_TASKLEVELS; i++)
+    {
+        /* 只要上层有任务存在 */
+        if(taskctl->level[i].running > 0)
+        {
+            break; /* 找到了 */
+        }
+    }
+    taskctl->now_lv    = i;
+    taskctl->lv_change = 0; /* 在下次任务切换时不改变level */
+    return;
+}
 TASK *task_init(MEMMAN *memman)
 {
     int                        i;
@@ -19,8 +85,8 @@ TASK *task_init(MEMMAN *memman)
 
     for(i = 0; i < MAX_TASKLEVELS; i++)
     {
-        taskctl->level[i]->running = 0; /* 当前活动任务数量 */
-        taskctl->level[i]->now     = 0; /* 当前运行哪个任务 */
+        taskctl->level[i].running = 0; /* 当前活动任务数量 */
+        taskctl->level[i].now     = 0; /* 当前运行哪个任务 */
     }
 
     task              = task_alloc();
@@ -96,129 +162,48 @@ void task_run(TASK *task, int level, int priority)
 
 void task_switch()
 {
-    TASK *task;
-    taskctl->now++; /* 直接切当前正在运行的任务的下一个任务 */
-    if(taskctl->now == taskctl->running) /* 如果下一个任务达到活动任务的边界，起始是0，如果现在有两个活动任务，now会是0,1,自增后到2，此刻就必须重置 */
+    TASKLEVEL *tl       = &taskctl->level[taskctl->now_lv]; /* 先找level */
+    TASK      *now_task = tl->tasks[tl->now]; /* 再找level对应下的活动task */
+    TASK      *new_task;
+    tl->now++;/* 顺位执行下一个task */
+    if(tl->now == tl->running)
     {
-        taskctl->now = 0; /* 切换到任务调度本身（相当于重置） */
+        tl->now = 0; /* 如果已经切换到末尾了，则回到起点 */
     }
-    task = taskctl->tasks[taskctl->now];
-    timer_settime(task_timer, task->priority);
-    if(taskctl->running >= 2)
+    if(taskctl->lv_change != 0)
     {
-        farjmp(0, task->sel);
+        /* 如果要进行level切换 */
+        task_switchsub();
+        tl = &taskctl->level[taskctl->now_lv];
     }
+    new_task = tl->tasks[tl->now];
+    timer_settime(task_timer, new_task->priority);
+    if(new_task != now_task)
+    {
+        farjmp(0, new_task->sel);
+    }
+
     return;
 }
 /* 当前正在运行任务A让任务A休眠，需要在处理结束之后，马上切换到下一个任务 */
 /* 当前正在运行任务A让任务B休眠，主要还是移动任务 */
 void task_sleep(TASK *task)
 {
-    int  i;
-    char ts = 0;
-    if(task->flags == 2) /* 如果指定任务处于活动状态 */
-    {
-        if(task == taskctl->tasks[taskctl->now]) /* 当前正在运行任务a让任务a休眠 */
+   TASK *now_task;
+   if(task->flags == 2)
+   {
+        /* 如果处于活动状态 */
+        now_task = task_now();
+        task_remove(task); /* 执行此语句的话flags将变为1 */
+        if(task == now_task)
         {
-            ts = 1; /* 让自己休眠的话，稍后需要进行任务切换 */
+            /* 如果是让自己休眠，则需要进行任务切换,以level为最高优先级 */
+            task_switchsub();  /* 他主要修改当前的level */
+            now_task = task_now(); /* 在设定后获取当前任务的值(根据当前的level,找到该level下活动的task) */
+            farjmp(0, now_task->sel);
         }
-
-        /* 寻找task所在的位置 */
-        for(i = 0; i < taskctl->running; i++)
-        {
-            if(taskctl->tasks[i] == task)
-            {
-                break;
-            }
-        }
-        taskctl->running--;
-        if(i < taskctl->now) /* i在当前执行的任务前面 ，因为待会要移动，此刻现将now提前；如果在后面就不用执行函数体 */
-        {
-            taskctl->now--; /* 需要移动成员，要相应的进行处理 */
-        }
-        /* 移动成员 */
-        for(; i < taskctl->running; i++)
-        {
-            taskctl->tasks[i] = taskctl->tasks[i + 1]; /* 后面的向前移动 */
-        }
-        task->flags = 1; /* 不工作的状态 */
-        if(ts != 0)
-        {
-            /* 任务切换 */
-            if(taskctl->now >= taskctl->running)
-            {
-                /* 如果now的值出现异常，则进行修正 */
-                taskctl->now = 0;
-            }
-            /* 现在的now可能没变，但是tasks中的排列变化了，因为输入的task被移除了，可以看做是task的下一个任务顶上来了 */
-            farjmp(0, taskctl->tasks[taskctl->now]->sel);
-        }
-    }
+   }
+   return;
 }
 
-/* 返回现在活动中的TASK的内存地址 */
-TASK *task_now()
-{   
-    TASKLEVEL *tl = &taskctl->level[taskctl->now_lv];
-    return tl->tasks[tl->now];
-}
 
-void  task_add(TASK *task)
-{
-    TASKLEVEL *tl          = &taskctl->level[task->level]; /* 先找到这个任务对应的level级 */
-    tl->tasks[tl->running] = task; /* 追加到tasks列表的末尾 */
-    tl->running++; /* 数量自增 */
-    task->flags = 2; /* 改为活动中,为何进来就要编程任务中呢？因为主要是task_run在调用，别被名字误解了 */
-    return;
-}
-
-void task_remove(TASK *task)
-{
-    int i;
-    TASKLEVEL *tl = &taskctl->level[task->level]; /* 先看这个任务属于哪个level */
-
-    /* 在该level下寻找task所在的位置 */
-    for(i = 0; i < tl->running; i++)
-    {
-        if(tl->tasks[i] == task)
-        {
-            break;
-        }
-    }
-
-    tl->running--; /* 首先数量上减一 */
-    if(i < tl->now)
-    {
-        tl->now--; /* 需要移动成员，此时的now应该往前移一个 */
-    }
-    if(tl->now >= tl->running)
-    {
-        /* 如果now的值出现异常，则进行修正 */
-        tl->now = 0;
-    }
-    task->flags = 1; /* 休眠中 */
-    /* 移动中 */
-    for(; i < tl->running; i++)
-    {
-        tl->tasks[i] = tl->tasks[i + 1];
-    }
-
-    return;
-}
-
-void  task_switchsub()
-{
-    int i;
-    /* 寻找最上层的LEVEL */
-    for(i = 0; i < MAX_TASKLEVELS; i++)
-    {
-        /* 只要上层有任务存在 */
-        if(taskctl->level[i]->running > 0)
-        {
-            break; /* 找到了 */
-        }
-    }
-    taskctl->now_lv    = i;
-    taskctl->lv_change = 0; /* 在下次任务切换时不改变level */
-    return;
-}

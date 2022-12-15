@@ -200,7 +200,7 @@ typedef struct _TIMER_
 	struct _TIMER_ *next;
 	unsigned int    timeout, flags; /* flag 用于记录各个定时器的状态 */
 	FIFO32         *fifo;
-	unsigned char  *data;
+	int             data;
 }TIMER;
 
 typedef struct _TIMERCTL_{
@@ -210,7 +210,6 @@ typedef struct _TIMERCTL_{
 }TIMERCTL;
 
 void   init_pit(void);
-void   settimer(unsigned int timeout, FIFO32 *fifo, unsigned char data);
 TIMER *timer_alloc(void);
 void   timer_free(TIMER *timer);
 void   timer_init(TIMER *timer, FIFO32 *fifo, int data);
@@ -252,7 +251,7 @@ typedef struct _TASKCTL_
 {
 	int        now_lv; /* 现在活动中的LEVEL*/
 	char       lv_change; /* 在下次任务切换时是否需要改变LEVEL */
-	TASKLEVEL *level[MAX_TASKLEVELS];  
+	TASKLEVEL  level[MAX_TASKLEVELS];  
 	TASK       tasks0[MAX_TASKS];
 }TASKCTL;
 
@@ -260,7 +259,7 @@ typedef struct _TASKCTL_
 
 TASK *task_init(MEMMAN *memman);
 TASK *task_alloc();
-void  task_run(TASK *task, int priority);
+void  task_run(TASK *task, int level, int priority);
 void  task_switch();
 void  task_sleep(TASK *task);
 void  task_add(TASK *task);

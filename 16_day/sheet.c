@@ -17,6 +17,7 @@ SHTCTL *shtctl_init(MEMMAN *memman, unsigned char *vram, int xsize, int ysize)
     {
         /* 为啥直接把这个结构体给扔了？？？ */
         memman_free_4k(memman, (unsigned int)ctl, sizeof(SHTCTL));
+		goto err;
     }
 
     ctl->vram  = vram;              /* 用于显示的显存地址 */
@@ -96,7 +97,7 @@ void sheet_slide(SHEET *sht, int vx0, int vy0)
 
 void sheet_free(SHEET *sht)
 {
-    SHTCTL *ctl     = (SHTCTL *)sht->ctl;
+
     if(sht->height >= 0)
     {
         /* 如果处于显示状态，则先设定为隐藏 */
