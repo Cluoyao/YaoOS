@@ -11,6 +11,8 @@ void make_textbox8(SHEET *sht, int x0, int y0, int sx, int sy, int c);
 
 void task_b_main(SHEET *sht_back);
 
+void console_task(SHEET *sheet);
+
 #define MEMMAN_ADDR 0x003c0000  /* 栈及其他的空间里面*/
 
 void HariMain(void)
@@ -27,9 +29,9 @@ void HariMain(void)
 	unsigned int               memtotal, count = 0;
 	MEMMAN                    *memman = (MEMMAN *) MEMMAN_ADDR;
 	SHTCTL                    *shtctl;
-	SHEET                     *sht_back, *sht_mouse, *sht_win, *sht_win_b[3];
-	unsigned char             *buf_back, buf_mouse[256], *buf_win, *buf_win_b;
-	TASK                      *task_a, *task_b[3];
+	SHEET                     *sht_back, *sht_mouse, *sht_win, *sht_win_b[3],  *sht_cons;
+	unsigned char             *buf_back, buf_mouse[256], *buf_win, *buf_win_b, *buf_cons;
+	TASK                      *task_a, *task_b[3], *task_cons;
 
 	static char      keytable[0x54] = 
 	{
@@ -67,6 +69,24 @@ void HariMain(void)
 	buf_back  = (unsigned char *)memman_alloc_4k(memman, binfo->scrnx * binfo->scrny); /* 分配图层缓存，存放背景信息 */
 	sheet_setbuf(sht_back,  buf_back,  binfo->scrnx, binfo->scrny, -1); /* 没有透明色 */
 	init_screen8(buf_back, binfo->scrnx, binfo->scrny);
+
+	sht_cons  = sheet_alloc(shtctl);
+	buf_cons  = (unsigned char *)memman_alloc_4k(memman, 256 * 165);
+	sheet_setbuf(sht_cons, buf_cons, 256, 165, -1); /* 无透明颜色 */
+	make_window8(buf_cons, 256, 165, "Console", 0);
+	make_textbox8(sht_cons, 8, 28, 240, 128, COL8_000000);
+	task_cons = task_alloc();
+	task_cons->tss.esp = memman_alloc_4k(memman, 64 * 1024) + 64 * 1024 - 8;
+	task_cons->tss.eip = (int)&console_task;
+	task_cons->tss.es  = 1 * 8;
+	task_cons->tss.cs  = 2 * 8;
+	task_cons->tss.ss  = 1 * 8;
+	task_cons->tss.ds  = 1 * 8;
+	task_cons->tss.fs  = 1 * 8;
+	task_cons->tss.gs  = 1 * 8;
+	*((int *) (task_cons->tss.esp + 4)) = (int)sht_cons;
+	task_run(task_cons, 2, 2); /* level=2, priority=2 */ 
+
 
 	/* sht_win_b */
 	for(i = 0; i < 3; i++)
@@ -112,22 +132,24 @@ void HariMain(void)
 
 
 	/* 从左上角(0,0)点开始绘制显示界面 */
-	sheet_slide(sht_back, 0, 0);
-	sheet_slide(sht_win_b[0], 168, 56);
-	sheet_slide(sht_win_b[1], 8,   116);
-	sheet_slide(sht_win_b[2], 168, 116);
+	sheet_slide(sht_back, 0,  0);
+	sheet_slide(sht_cons, 32, 4);
+	// sheet_slide(sht_win_b[0], 168, 56);
+	// sheet_slide(sht_win_b[1], 8,   116);
+	// sheet_slide(sht_win_b[2], 168, 116);
 
 	/* 移动鼠标图层到指定位置 */
-	sheet_slide(sht_win,   8, 56);
+	sheet_slide(sht_win,   64, 56);
 	sheet_slide(sht_mouse, mx, my);
 
 	/* 设置显示背景（图层）高度为0 */
 	sheet_updown(sht_back,      0);
-	sheet_updown(sht_win_b[0],  1);
-	sheet_updown(sht_win_b[1],  2);
-	sheet_updown(sht_win_b[2],  3);
-	sheet_updown(sht_win,       4);
-	sheet_updown(sht_mouse,     5);
+	sheet_updown(sht_cons,      1);
+	// sheet_updown(sht_win_b[0],  1);
+	// sheet_updown(sht_win_b[1],  2);
+	// sheet_updown(sht_win_b[2],  3);
+	sheet_updown(sht_win,       2);
+	sheet_updown(sht_mouse,     3);
 
 	sprintf(s, "(%d, %d)", mx, my);
 	/* 在背景图层上显示信息 */
@@ -376,3 +398,43 @@ void task_b_main(SHEET *sht_back_b)
 	}
 }
 
+void console_task(SHEET *sheet)
+{
+	FIFO32     fifo;
+	TIMER     *timer;
+	TASK      *task = task_now();
+	int        i, fifobuf[128], cursor_x = 8, cursor_c = COL8_000000;
+	fifo32_init(&fifo, 128, fifobuf, task);
+
+	timer = timer_alloc();
+	timer_init(timer, &fifo, 1);
+	timer_settime(timer, 50);
+
+	for(;;)
+	{
+		io_cli();
+		if(fifo32_status(&fifo) == 0)
+		{
+			task_sleep(task);
+			io_sti();
+		}
+		else
+		{
+			i = fifo32_get(&fifo);
+			io_sti();
+			if(i <= 1)  /* 光标用定时器 */
+			{
+				if(i != 0)
+				{
+					timer_init(timer, &fifo, 0); /* 下次置0 */
+					cursor_c = COL8_FFFFFF;
+				}
+				else
+				{
+					timer_init(timer, &fifo, 1);
+					cursor_c = COL8_000000;
+				}
+			}
+		}
+	}
+}

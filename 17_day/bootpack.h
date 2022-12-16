@@ -262,6 +262,7 @@ TASK *task_alloc();
 void  task_run(TASK *task, int level, int priority);
 void  task_switch();
 void  task_sleep(TASK *task);
+TASK *task_now();
 void  task_add(TASK *task);
 void  task_switchsub();
 void  task_idle();
