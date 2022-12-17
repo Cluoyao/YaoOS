@@ -14,11 +14,12 @@ void task_b_main(SHEET *sht_back);
 void console_task(SHEET *sheet);
 
 #define MEMMAN_ADDR 0x003c0000  /* 栈及其他的空间里面*/
+#define KEYCMD_LED  0xed
 
 void HariMain(void)
 {
 	struct BOOTINFO           *binfo = (struct BOOTINFO *) ADR_BOOTINFO;
-	FIFO32                     fifo;
+	FIFO32                     fifo, keycmd;
 	char                       s[40];
 	int                        fifobuf[128];
    
@@ -32,7 +33,7 @@ void HariMain(void)
 	SHEET                     *sht_back, *sht_mouse, *sht_win,  *sht_cons;
 	unsigned char             *buf_back, buf_mouse[256], *buf_win, *buf_cons;
 	TASK                      *task_a, *task_cons;
-	int                        key_to = 0, key_shift = 0, key_leds = (binfo->leds >> 4) & 7;
+	int                        key_to = 0, key_shift = 0, key_leds = (binfo->leds >> 4) & 7, keycmd_wait = -1;
 	int                        key_capslk = 0;
 
 	static char keytable0[0x80] = {
@@ -141,8 +142,18 @@ void HariMain(void)
 	/* 在背景图层上显示信息 */
 	putfonts8_asc_sht(sht_back, 0, 32, COL8_FFFFFF, COL8_008484, s, 40);
 
+	fifo32_put(&keycmd, KEYCMD_LED);
+	fifo32_put(&keycmd, key_leds);
+
 	for (;;) 
 	{
+		if(fifo32_status(&keycmd) > 0 && keycmd_wait < 0)
+		{
+			/* 如果存在向键盘控制器发送的数据，则发送它 */
+			keycmd_wait = fifo32_get(&keycmd);
+			wait_KBC_sendready();
+			io_out8(PORT_KEYDAT, keycmd_wait);
+		}
 		io_cli(); /* 关闭中断 */
 		if (fifo32_status(&fifo) == 0) 
 		{
@@ -156,6 +167,34 @@ void HariMain(void)
 
 			if (256 <= i && i <= 511) /* 键盘数据 */
 			{
+				if(i == 256 + 0x3a)
+				{
+					key_leds ^= 4;
+					fifo32_put(&keycmd, KEYCMD_LED);
+					fifo32_put(&keycmd, key_leds);
+				}
+				if(i == 256 + 0x45)
+				{
+					key_leds ^= 2;
+					fifo32_put(&keycmd, KEYCMD_LED);
+					fifo32_put(&keycmd, key_leds);
+				}
+				if(i == 256 + 0x46)
+				{
+					key_leds ^= 1;
+					fifo32_put(&keycmd, KEYCMD_LED);
+					fifo32_put(&keycmd, key_leds);
+				}
+				if(i == 256 + 0xfa)
+				{
+					keycmd_wait = -1;
+				}
+				if(i == 256 + 0xfe)
+				{
+					wait_KBC_sendready();
+					io_out8(PORT_KEYDAT, keycmd_wait);
+				}
+
 				sprintf(s, "%02X", i - 256);
 				putfonts8_asc_sht(sht_back, 0, 16, COL8_FFFFFF, COL8_008484, s, 2);
 				if (i < 256 + 0x80) 
