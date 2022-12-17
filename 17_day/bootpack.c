@@ -32,7 +32,8 @@ void HariMain(void)
 	SHEET                     *sht_back, *sht_mouse, *sht_win,  *sht_cons;
 	unsigned char             *buf_back, buf_mouse[256], *buf_win, *buf_cons;
 	TASK                      *task_a, *task_cons;
-	int                        key_to = 0, key_shift = 0;
+	int                        key_to = 0, key_shift = 0, key_leds = (binfo->leds >> 4) & 7;
+	int                        key_capslk = 0;
 
 	static char keytable0[0x80] = {
 		0,   0,   '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', '=', 0,   0,
@@ -172,6 +173,14 @@ void HariMain(void)
 				{
 					s[0] = 0;
 				}
+				if('A' <= s[0] && s[0] <= 'Z')
+				{
+					/* 当输入字符为英文字母时 */
+					if((key_capslk == 0 && key_shift == 0) || (key_capslk != 0 && key_shift != 0))
+					{
+						s[0] += 0x20; /* 将大写字母转换成小写字母 */
+					}
+				}
 
 				if(s[0] != 0)
 				{
@@ -224,6 +233,10 @@ void HariMain(void)
 					}
 					sheet_refresh(sht_win,  0, 0, sht_win->bxsize,  21);
 					sheet_refresh(sht_cons, 0, 0, sht_cons->bxsize, 21);
+				}
+				if(i == 256 + 0x3a)
+				{
+					key_capslk = !key_capslk;
 				}
 				if(i == 256 + 0x2a) /* 左键shift on*/
 				{
