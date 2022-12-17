@@ -88,27 +88,27 @@ void HariMain(void)
 	task_run(task_cons, 2, 2); /* level=2, priority=2 */ 
 
 
-	/* sht_win_b */
-	for(i = 0; i < 3; i++)
-	{
-		sht_win_b[i]  = sheet_alloc(shtctl); /* 从管理单元中拿一个图层出来用，作为背景图层 */
-		buf_win_b     = (unsigned char *)memman_alloc_4k(memman, 144 * 52); /* 分配图层缓存，存放背景信息 */
-		sheet_setbuf(sht_win_b[i],  buf_win_b,  144, 52, -1); /* 没有透明色 */
-		sprintf(s, "task_b%d", i);
-		make_window8(buf_win_b, 144, 52, s, 0);
+	// /* sht_win_b */
+	// for(i = 0; i < 3; i++)
+	// {
+	// 	sht_win_b[i]  = sheet_alloc(shtctl); /* 从管理单元中拿一个图层出来用，作为背景图层 */
+	// 	buf_win_b     = (unsigned char *)memman_alloc_4k(memman, 144 * 52); /* 分配图层缓存，存放背景信息 */
+	// 	sheet_setbuf(sht_win_b[i],  buf_win_b,  144, 52, -1); /* 没有透明色 */
+	// 	sprintf(s, "task_b%d", i);
+	// 	make_window8(buf_win_b, 144, 52, s, 0);
 
-		task_b[i]          = task_alloc();
-		task_b[i]->tss.esp = memman_alloc_4k(memman, 64 * 1024) + 64 * 1024 - 8;
-		task_b[i]->tss.eip = (int)&task_b_main;
-		task_b[i]->tss.es  = 1 * 8;
-		task_b[i]->tss.cs  = 2 * 8;
-		task_b[i]->tss.ss  = 1 * 8;
-		task_b[i]->tss.ds  = 1 * 8;
-		task_b[i]->tss.fs  = 1 * 8;
-		task_b[i]->tss.gs  = 1 * 8;
-		*((int *)(task_b[i]->tss.esp + 4)) = (int)sht_win_b[i]; /* 现在显示在窗口中,task_b的入参数sheet */
-		// task_run(task_b[i], 2, i+1);
-	}
+	// 	task_b[i]          = task_alloc();
+	// 	task_b[i]->tss.esp = memman_alloc_4k(memman, 64 * 1024) + 64 * 1024 - 8;
+	// 	task_b[i]->tss.eip = (int)&task_b_main;
+	// 	task_b[i]->tss.es  = 1 * 8;
+	// 	task_b[i]->tss.cs  = 2 * 8;
+	// 	task_b[i]->tss.ss  = 1 * 8;
+	// 	task_b[i]->tss.ds  = 1 * 8;
+	// 	task_b[i]->tss.fs  = 1 * 8;
+	// 	task_b[i]->tss.gs  = 1 * 8;
+	// 	*((int *)(task_b[i]->tss.esp + 4)) = (int)sht_win_b[i]; /* 现在显示在窗口中,task_b的入参数sheet */
+	// 	// task_run(task_b[i], 2, i+1);
+	// }
 
 	/* sht_win */
 	sht_win   = sheet_alloc(shtctl); 
@@ -434,6 +434,10 @@ void console_task(SHEET *sheet)
 					timer_init(timer, &fifo, 1);
 					cursor_c = COL8_000000;
 				}
+
+				timer_settime(timer, 50);
+				boxfill8(sheet->buf, sheet->bxsize, cursor_c, cursor_x, 28, cursor_x + 7, 43);
+				sheet_refresh(sheet, cursor_x, 28, cursor_x + 8, 44);
 			}
 		}
 	}
