@@ -453,8 +453,9 @@ void console_task(SHEET *sheet)
 {
 	FIFO32     fifo;
 	TIMER     *timer;
-	TASK      *task = task_now();
-	int        i, fifobuf[128], cursor_x = 16, cursor_c = COL8_000000;
+	TASK      *task            = task_now();
+	int        cursor_init_pos = 64;
+	int        i, fifobuf[128], cursor_x = cursor_init_pos, cursor_c = COL8_000000;
 	char       s[2];
 
 	fifo32_init(&task->fifo, 128, fifobuf, task);
@@ -464,7 +465,7 @@ void console_task(SHEET *sheet)
 	timer_settime(timer, 50);
 
 	/* 显示提示符 */
-	putfonts8_asc_sht(sheet, 8, 29, COL8_FFFFFF, COL8_000000, ">", 1);
+	putfonts8_asc_sht(sheet, 8, 29, COL8_FFFFFF, COL8_000000, "YaoOs>", 6);
 
 	for(;;)
 	{
@@ -497,7 +498,7 @@ void console_task(SHEET *sheet)
 				if(i == 8 + 256)
 				{
 					/* 控制退格键移动*/
-					if(cursor_x > 16)
+					if(cursor_x > cursor_init_pos)
 					{
 						/* 用空白擦除光标后将光标前移一位 */
 						putfonts8_asc_sht(sheet, cursor_x, 28, COL8_FFFFFF, COL8_000000, " ", 1);
