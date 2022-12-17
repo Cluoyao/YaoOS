@@ -32,16 +32,27 @@ void HariMain(void)
 	SHEET                     *sht_back, *sht_mouse, *sht_win,  *sht_cons;
 	unsigned char             *buf_back, buf_mouse[256], *buf_win, *buf_cons;
 	TASK                      *task_a, *task_cons;
-	int                        key_to = 0;
+	int                        key_to = 0, key_shift = 0;
 
-	static char      keytable[0x54] = 
-	{
-		0, 0, '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', '^', 0, 0,
-		'Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P', '@', '[', 0, 0, 'A', 'S',
-		'D', 'F', 'G', 'H', 'J', 'K', 'L', ';', ':', 0, 0, ']', 'Z', 'X', 'C', 'V',
-		'B', 'N', 'M', ',', '.', '/', 0, '*', 0, ' ', 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, '7', '8', '9', '-', '4', '5', '6', '+', '1',
-		'2', '3', '0', '.'
+	static char keytable0[0x80] = {
+		0,   0,   '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', '=', 0,   0,
+		'Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P', '[', ']', 0,   0,   'A', 'S',
+		'D', 'F', 'G', 'H', 'J', 'K', 'L', ';', '\'', 0,   0,   ']', 'Z', 'X', 'C', 'V',
+		'B', 'N', 'M', ',', '.', '/', 0,   '*', 0,   ' ', 0,   0,   0,   0,   0,   0,
+		0,   0,   0,   0,   0,   0,   0,   '7', '8', '9', '-', '4', '5', '6', '+', '1',
+		'2', '3', '0', '.', 0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,
+		0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,
+		0,   0,   0,   0x5c, 0,  0,   0,   0,   0,   0,   0,   0,   0,   0x5c, 0,  0
+	};
+	static char keytable1[0x80] = {
+		0,   0,   '!', '@', '#', '$', '%', '^', '&', '*', '(', ')', '_', '+', 0,   0,
+		'Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P', '{', '}', 0,   0,   'A', 'S',
+		'D', 'F', 'G', 'H', 'J', 'K', 'L', ':', '"', 0,   0,   '}', 'Z', 'X', 'C', 'V',
+		'B', 'N', 'M', '<', '>', '?', 0,   '*', 0,   ' ', 0,   0,   0,   0,   0,   0,
+		0,   0,   0,   0,   0,   0,   0,   '7', '8', '9', '-', '4', '5', '6', '+', '1',
+		'2', '3', '0', '.', 0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,
+		0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,
+		0,   0,   0,   '_', 0,   0,   0,   0,   0,   0,   0,   0,   0,   '|', 0,   0
 	};
 
 	init_gdtidt();
@@ -88,29 +99,6 @@ void HariMain(void)
 	*((int *) (task_cons->tss.esp + 4)) = (int)sht_cons;
 	task_run(task_cons, 2, 2); /* level=2, priority=2 */ 
 
-
-	// /* sht_win_b */
-	// for(i = 0; i < 3; i++)
-	// {
-	// 	sht_win_b[i]  = sheet_alloc(shtctl); /* 从管理单元中拿一个图层出来用，作为背景图层 */
-	// 	buf_win_b     = (unsigned char *)memman_alloc_4k(memman, 144 * 52); /* 分配图层缓存，存放背景信息 */
-	// 	sheet_setbuf(sht_win_b[i],  buf_win_b,  144, 52, -1); /* 没有透明色 */
-	// 	sprintf(s, "task_b%d", i);
-	// 	make_window8(buf_win_b, 144, 52, s, 0);
-
-	// 	task_b[i]          = task_alloc();
-	// 	task_b[i]->tss.esp = memman_alloc_4k(memman, 64 * 1024) + 64 * 1024 - 8;
-	// 	task_b[i]->tss.eip = (int)&task_b_main;
-	// 	task_b[i]->tss.es  = 1 * 8;
-	// 	task_b[i]->tss.cs  = 2 * 8;
-	// 	task_b[i]->tss.ss  = 1 * 8;
-	// 	task_b[i]->tss.ds  = 1 * 8;
-	// 	task_b[i]->tss.fs  = 1 * 8;
-	// 	task_b[i]->tss.gs  = 1 * 8;
-	// 	*((int *)(task_b[i]->tss.esp + 4)) = (int)sht_win_b[i]; /* 现在显示在窗口中,task_b的入参数sheet */
-	// 	// task_run(task_b[i], 2, i+1);
-	// }
-
 	/* sht_win */
 	sht_win   = sheet_alloc(shtctl); 
 	buf_win   = (unsigned char *)memman_alloc_4k(memman, 160 * 52);
@@ -130,14 +118,9 @@ void HariMain(void)
 	mx = (binfo->scrnx - 16) / 2; /* 计算画面中心坐标 */
 	my = (binfo->scrny - 28 - 16) / 2;
 
-
-
 	/* 从左上角(0,0)点开始绘制显示界面 */
 	sheet_slide(sht_back, 0,  0);
 	sheet_slide(sht_cons, 32, 4);
-	// sheet_slide(sht_win_b[0], 168, 56);
-	// sheet_slide(sht_win_b[1], 8,   116);
-	// sheet_slide(sht_win_b[2], 168, 116);
 
 	/* 移动鼠标图层到指定位置 */
 	sheet_slide(sht_win,   64, 56);
@@ -146,9 +129,6 @@ void HariMain(void)
 	/* 设置显示背景（图层）高度为0 */
 	sheet_updown(sht_back,      0);
 	sheet_updown(sht_cons,      1);
-	// sheet_updown(sht_win_b[0],  1);
-	// sheet_updown(sht_win_b[1],  2);
-	// sheet_updown(sht_win_b[2],  3);
 	sheet_updown(sht_win,       2);
 	sheet_updown(sht_mouse,     3);
 
@@ -177,15 +157,29 @@ void HariMain(void)
 			{
 				sprintf(s, "%02X", i - 256);
 				putfonts8_asc_sht(sht_back, 0, 16, COL8_FFFFFF, COL8_008484, s, 2);
-				if (i < 256 + 0x54 && keytable[i - 256] != 0) 
+				if (i < 256 + 0x80) 
 				{
-					/* 发送给任务A */
+					if(key_shift == 0)
+					{
+						s[0] = keytable0[i - 256];
+					}
+					else
+					{
+						s[0] = keytable1[i - 256];
+					}
+				}
+				else
+				{
+					s[0] = 0;
+				}
+
+				if(s[0] != 0)
+				{
 					if(key_to == 0)
 					{
 						if(cursor_x < 128)
 						{
 							/* 显示一个字符之后，将光标后移一位 */
-							s[0] = keytable[i - 256];
 							s[1] = 0;
 							putfonts8_asc_sht(sht_win, cursor_x, 28, COL8_000000, COL8_FFFFFF, s, 1);
 							cursor_x += 8;
@@ -193,7 +187,7 @@ void HariMain(void)
 					}
 					else
 					{
-						fifo32_put(&task_cons->fifo, keytable[i - 256] + 256);
+						fifo32_put(&task_cons->fifo, s[0] + 256);
 					}
 				}
 				if(i == 256 + 0x0e)
@@ -230,6 +224,22 @@ void HariMain(void)
 					}
 					sheet_refresh(sht_win,  0, 0, sht_win->bxsize,  21);
 					sheet_refresh(sht_cons, 0, 0, sht_cons->bxsize, 21);
+				}
+				if(i == 256 + 0x2a) /* 左键shift on*/
+				{
+					key_shift |= 1;
+				}
+				if(i == 256 + 0x36) /* 右键shift on*/
+				{
+					key_shift |= 2;
+				}
+				if(i == 256 + 0xaa) /* 左键shift off*/
+				{
+					key_shift &= ~1;
+				}
+				if(i == 256 + 0xb6) /* 右键shift off*/
+				{
+					key_shift &= ~2;
 				}
 				boxfill8(sht_win->buf, sht_win->bxsize, cursor_c, cursor_x, 28, cursor_x + 7, 43); /* 擦除 */
 				sheet_refresh(sht_win, cursor_x, 28, cursor_x + 8, 44);
