@@ -2,6 +2,7 @@
 
 #include "bootpack.h"
 #include <stdio.h>
+#include <string.h>
 
 void make_window8(unsigned char *buf, int xsize, int ysize, char *title, char act);
 
@@ -11,7 +12,9 @@ void make_textbox8(SHEET *sht, int x0, int y0, int sx, int sy, int c);
 
 void task_b_main(SHEET *sht_back);
 
-void console_task(SHEET *sheet);
+void console_task(SHEET *sheet, unsigned int memtotal);
+
+int  cons_newline(int cursor_y, SHEET *sheet);
 
 #define MEMMAN_ADDR 0x003c0000  /* 栈及其他的空间里面*/
 #define KEYCMD_LED  0xed
@@ -99,6 +102,7 @@ void HariMain(void)
 	task_cons->tss.fs  = 1 * 8;
 	task_cons->tss.gs  = 1 * 8;
 	*((int *) (task_cons->tss.esp + 4)) = (int)sht_cons;
+	*((int *) (task_cons->tss.esp + 8)) = (int)memtotal;
 	task_run(task_cons, 2, 2); /* level=2, priority=2 */ 
 
 	/* sht_win */
@@ -134,26 +138,15 @@ void HariMain(void)
 	sheet_updown(sht_win,       2);
 	sheet_updown(sht_mouse,     3);
 
-	sprintf(s, "(%d, %d)", mx, my);
-	/* 在背景图层上显示信息 */
-	putfonts8_asc_sht(sht_back, 0, 0, COL8_FFFFFF, COL8_008484, s, 10);
+	// sprintf(s, "(%d, %d)", mx, my);
+	// /* 在背景图层上显示信息 */
+	// putfonts8_asc_sht(sht_back, 0, 0, COL8_FFFFFF, COL8_008484, s, 10);
 
-	sprintf(s, "memory %dMB free : %dKB", memtotal / (1024 * 1024), memman_total(memman) / 1024);
-	/* 在背景图层上显示信息 */
-	putfonts8_asc_sht(sht_back, 0, 32, COL8_FFFFFF, COL8_008484, s, 40);
 
-	// fifo32_put(&keycmd, KEYCMD_LED);
-	// fifo32_put(&keycmd, key_leds);
+
 
 	for (;;) 
 	{
-		// if(fifo32_status(&keycmd) > 0 && keycmd_wait < 0)
-		// {
-		// 	/* 如果存在向键盘控制器发送的数据，则发送它 */
-		// 	keycmd_wait = fifo32_get(&keycmd);
-		// 	wait_KBC_sendready();
-		// 	io_out8(PORT_KEYDAT, keycmd_wait);
-		// }
 		io_cli(); /* 关闭中断 */
 		if (fifo32_status(&fifo) == 0) 
 		{
@@ -167,36 +160,8 @@ void HariMain(void)
 
 			if (256 <= i && i <= 511) /* 键盘数据 */
 			{
-				// if(i == 256 + 0x3a)
-				// {
-				// 	key_leds ^= 4;
-				// 	fifo32_put(&keycmd, KEYCMD_LED);
-				// 	fifo32_put(&keycmd, key_leds);
-				// }
-				// if(i == 256 + 0x45)
-				// {
-				// 	key_leds ^= 2;
-				// 	fifo32_put(&keycmd, KEYCMD_LED);
-				// 	fifo32_put(&keycmd, key_leds);
-				// }
-				// if(i == 256 + 0x46)
-				// {
-				// 	key_leds ^= 1;
-				// 	fifo32_put(&keycmd, KEYCMD_LED);
-				// 	fifo32_put(&keycmd, key_leds);
-				// }
-				// if(i == 256 + 0xfa)
-				// {
-				// 	keycmd_wait = -1;
-				// }
-				// if(i == 256 + 0xfe)
-				// {
-				// 	wait_KBC_sendready();
-				// 	io_out8(PORT_KEYDAT, keycmd_wait);
-				// }
-
-				sprintf(s, "%02X", i - 256);
-				putfonts8_asc_sht(sht_back, 0, 16, COL8_FFFFFF, COL8_008484, s, 2);
+				// sprintf(s, "%02X", i - 256);
+				// putfonts8_asc_sht(sht_back, 0, 16, COL8_FFFFFF, COL8_008484, s, 2);
 				if (i < 256 + 0x80) 
 				{
 					if(key_shift == 0)
@@ -320,20 +285,20 @@ void HariMain(void)
 				if (mouse_decode(&mdec, i - 512) != 0) 
 				{
 					/* 3字节都凑齐了，所以把它们显示出来*/
-					sprintf(s, "[lcr %4d %4d]", mdec.x, mdec.y);
-					if ((mdec.btn & 0x01) != 0) 
-					{
-						s[1] = 'L';
-					}
-					if ((mdec.btn & 0x02) != 0) 
-					{
-						s[3] = 'R';
-					}
-					if ((mdec.btn & 0x04) != 0) 
-					{
-						s[2] = 'C';
-					}
-					putfonts8_asc_sht(sht_back, 32, 16, COL8_FFFFFF, COL8_008484, s, 15);
+					// sprintf(s, "[lcr %4d %4d]", mdec.x, mdec.y);
+					// if ((mdec.btn & 0x01) != 0) 
+					// {
+					// 	s[1] = 'L';
+					// }
+					// if ((mdec.btn & 0x02) != 0) 
+					// {
+					// 	s[3] = 'R';
+					// }
+					// if ((mdec.btn & 0x04) != 0) 
+					// {
+					// 	s[2] = 'C';
+					// }
+					// putfonts8_asc_sht(sht_back, 32, 16, COL8_FFFFFF, COL8_008484, s, 15);
 
 					mx += mdec.x;
 					my += mdec.y;
@@ -539,7 +504,7 @@ void task_b_main(SHEET *sht_back_b)
 	}
 }
 
-void console_task(SHEET *sheet)
+void console_task(SHEET *sheet, unsigned int memtotal)
 {
 	FIFO32     fifo;
 	TIMER     *timer;
@@ -548,6 +513,9 @@ void console_task(SHEET *sheet)
 	int        i, fifobuf[128], cursor_x = cursor_init_pos, cursor_y = 28, cursor_c = -1;
 	char       s[2];
 	int        x,y;
+	char       cmdline[30];
+	MEMMAN    *memman = (MEMMAN *)MEMMAN_ADDR;
+	FILEINFO  *finfo  = (FILEINFO *)(ADR_DISKIMG + 0x002600);
 
 	fifo32_init(&task->fifo, 128, fifobuf, task);
 
@@ -619,21 +587,27 @@ void console_task(SHEET *sheet)
 					/* 回车键 */
 					/* 用空格将光标擦除 */
 					putfonts8_asc_sht(sheet, cursor_x, cursor_y, COL8_FFFFFF, COL8_000000, " ", 1);
-					if(cursor_y < 28 + 112)
+					cmdline[cursor_x / 8 - cursor_init_pos / 8] = 0;
+					cursor_y                  = cons_newline(cursor_y, sheet);
+					/* 执行命令 */
+					if(strcmp(cmdline, "mem") == 0)
 					{
-						cursor_y += 16;
+						/* */
+						sprintf(s, "total memory %dMB", memtotal / (1024 * 1024));
+						/* 在背景图层上显示信息 */
+						putfonts8_asc_sht(sheet, 8, cursor_y, COL8_FFFFFF, COL8_000000, s, 30);
+						cursor_y = cons_newline(cursor_y, sheet);
+						sprintf(s, "free : %dKB", memman_total(memman) / 1024);
+						/* 在背景图层上显示信息 */
+						putfonts8_asc_sht(sheet, 8, cursor_y, COL8_FFFFFF, COL8_000000, s, 30);
+						cursor_y = cons_newline(cursor_y, sheet);
+						cursor_y = cons_newline(cursor_y, sheet);
+
 					}
-					else
+					else if(strcmp(cmdline, "clear") == 0)
 					{
-						/* 滚动 */
-						for(y = 28; y < 28 + 112; y++)
-						{
-							for(x = 8; x < 8 + 240; x++)
-							{
-								sheet->buf[x + y * sheet->bxsize] = sheet->buf[x + (y + 16) * sheet->bxsize];
-							}
-						}
-						for(y = 28 + 112; y < 28 + 128; y++)
+						/* 清除界面的命令 */
+						for(y = 28; y < 28 + 128; y++)
 						{
 							for(x = 8; x < 8 + 240; x++)
 							{
@@ -641,7 +615,51 @@ void console_task(SHEET *sheet)
 							}
 						}
 						sheet_refresh(sheet, 8, 28, 8 + 240, 28 + 128);
+						cursor_y = 28;
 					}
+					else if(strcmp(cmdline, "luoyao") == 0)
+					{
+						sprintf(s, "%s", "LuoY is a handsome man.");
+						/* 在背景图层上显示信息 */
+						putfonts8_asc_sht(sheet, 8, cursor_y, COL8_FFFFFF, COL8_000000, s, 24);
+						cursor_y = cons_newline(cursor_y, sheet);
+					}
+					else if(strcmp(cmdline, "ls") == 0)
+					{
+						/* ls命令 */
+						for(x = 0; x < 224; x++)
+						{
+							if(finfo[x].name[0] == 0x00)
+							{
+								break; /* 不包含任何文件信息 */
+							}
+							if(finfo[x].name[0] != 0xe5)
+							{
+								if((finfo[x].type & 0x18) == 0)
+								{
+									sprintf(s, "filename.ext %7d", finfo[x].size);
+									for(y = 0; y < 8; y++)
+									{
+										s[y] = finfo[x].name[y];
+									}
+									s[9]  = finfo[x].ext[0];
+									s[10] = finfo[x].ext[1];
+									s[11] = finfo[x].ext[2];
+									/* 在背景图层上显示信息 */
+									putfonts8_asc_sht(sheet, 8, cursor_y, COL8_FFFFFF, COL8_000000, s, 30);
+									cursor_y = cons_newline(cursor_y, sheet);
+								}
+							}
+						}
+						cursor_y = cons_newline(cursor_y, sheet);
+					}
+					else if(cmdline[0] != 0)
+					{
+						putfonts8_asc_sht(sheet, cursor_init_pos, cursor_y, COL8_FFFFFF, COL8_000000, "Bad command", 12);
+						cursor_y = cons_newline(cursor_y, sheet);
+						cursor_y = cons_newline(cursor_y, sheet);
+					}
+					
 					putfonts8_asc_sht(sheet, 8, cursor_y, COL8_FFFFFF, COL8_000000, "YaoOs>", 6);
 					cursor_x  = cursor_init_pos;
 				}
@@ -652,6 +670,7 @@ void console_task(SHEET *sheet)
 						/* 显示一个字符之后将光标后移一位 */
 						s[0] = i - 256;
 						s[1] = 0;
+						cmdline[cursor_x / 8 - cursor_init_pos / 8] = i - 256;
 						putfonts8_asc_sht(sheet, cursor_x, cursor_y, COL8_FFFFFF, COL8_000000, s, 1);
 						cursor_x += 8;
 					}
@@ -665,4 +684,34 @@ void console_task(SHEET *sheet)
 			sheet_refresh(sheet, cursor_x, cursor_y, cursor_x + 8, cursor_y + 16);
 		}
 	}
+}
+
+int  cons_newline(int cursor_y, SHEET *sheet)
+{
+	int x, y;
+	if(cursor_y < 28 + 112)
+	{
+		cursor_y += 16;
+	}
+	else
+	{
+		/* 滚动 */
+		for(y = 28; y < 28 + 112; y++)
+		{
+			for(x = 8; x < 8 + 240; x++)
+			{
+				sheet->buf[x + y * sheet->bxsize] = sheet->buf[x + (y + 16) * sheet->bxsize];
+			}
+		}
+		for(y = 28 + 112; y < 28 + 128; y++)
+		{
+			for(x = 8; x < 8 + 240; x++)
+			{
+				sheet->buf[x + y * sheet->bxsize] = COL8_000000;
+			}
+		}
+		sheet_refresh(sheet, 8, 28, 8 + 240, 28 + 128);
+	}
+
+	return cursor_y;
 }
