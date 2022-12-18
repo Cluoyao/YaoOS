@@ -547,6 +547,7 @@ void console_task(SHEET *sheet)
 	int        cursor_init_pos = 64;
 	int        i, fifobuf[128], cursor_x = cursor_init_pos, cursor_y = 28, cursor_c = -1;
 	char       s[2];
+	int        x,y;
 
 	fifo32_init(&task->fifo, 128, fifobuf, task);
 
@@ -616,15 +617,33 @@ void console_task(SHEET *sheet)
 				else if(i == 10 + 256)
 				{
 					/* 回车键 */
+					/* 用空格将光标擦除 */
+					putfonts8_asc_sht(sheet, cursor_x, cursor_y, COL8_FFFFFF, COL8_000000, " ", 1);
 					if(cursor_y < 28 + 112)
 					{
-						/* 用空格将光标擦除 */
-						putfonts8_asc_sht(sheet, cursor_x, cursor_y, COL8_FFFFFF, COL8_000000, " ", 1);
 						cursor_y += 16;
-						putfonts8_asc_sht(sheet, 8, cursor_y, COL8_FFFFFF, COL8_000000, "YaoOs>", 6);
-						cursor_x  = cursor_init_pos;
-
 					}
+					else
+					{
+						/* 滚动 */
+						for(y = 28; y < 28 + 112; y++)
+						{
+							for(x = 8; x < 8 + 240; x++)
+							{
+								sheet->buf[x + y * sheet->bxsize] = sheet->buf[x + (y + 16) * sheet->bxsize];
+							}
+						}
+						for(y = 28 + 112; y < 28 + 128; y++)
+						{
+							for(x = 8; x < 8 + 240; x++)
+							{
+								sheet->buf[x + y * sheet->bxsize] = COL8_000000;
+							}
+						}
+						sheet_refresh(sheet, 8, 28, 8 + 240, 28 + 128);
+					}
+					putfonts8_asc_sht(sheet, 8, cursor_y, COL8_FFFFFF, COL8_000000, "YaoOs>", 6);
+					cursor_x  = cursor_init_pos;
 				}
 				else
 				{
