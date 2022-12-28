@@ -489,7 +489,7 @@ void console_task(SHEET *sheet, unsigned int memtotal)
 	TASK      *task            = task_now();
 	int        cursor_init_pos = 64;
 	int        i, fifobuf[128], cursor_x = cursor_init_pos, cursor_y = 28, cursor_c = -1;
-	char       s[2];
+	char       s[30];
 	int        x,y;
 	char       cmdline[30], *p;
 	MEMMAN    *memman = (MEMMAN *)MEMMAN_ADDR;
@@ -631,7 +631,7 @@ void console_task(SHEET *sheet, unsigned int memtotal)
 						}
 						cursor_y = cons_newline(cursor_y, sheet);
 					}
-					else if(strncmp(cmdline, "type ", 5))
+					else if(strncmp(cmdline, "type ", 5) == 0)
 					{
 						for(y = 0; y < 11; y++)
 						{
@@ -654,36 +654,56 @@ void console_task(SHEET *sheet, unsigned int memtotal)
 								}
 								y++;
 							}
-							/* 寻找文件 */
-							for(x = 0; x < 224; )
+						}
+						/* 寻找文件 */
+						for(x = 0; x < 224; )
+						{
+							if(finfo[x].name[0] == 0x00)
 							{
-								if(finfo[x].name[0] == 0x00)
-								{
-									break;
-								}
-								if((finfo[x].type & 0x18) == 0)
-								{
-									for(y = 0; y < 11; y++)
-									{
-										if(finfo[x].name[y] != s[y])
-										{
-											goto type_next_file;
-										}
-									}
-									break;
-								}
-type_next_file:
-								x++;
-
+								break;
 							}
-
-							if(x < 224 && finfo[x].name[0] != 0x00)
+							if((finfo[x].type & 0x18) == 0)
 							{
-								/* 找到文件的情况 */
-								y = finfo[x].size;
-								
+								for(y = 0; y < 11; y++)
+								{
+									if(finfo[x].name[y] != s[y])
+									{
+										goto type_next_file;
+									}
+								}
+								break;
+							}
+type_next_file:
+							x++;
+
+						}
+						
+						if(x < 224 && finfo[x].name[0] != 0x00)
+						{
+							/* 找到文件的情况 */
+							y = finfo[x].size;
+							p = (char *)(finfo[x].clustno * 512 + 0x003e00 + ADR_DISKIMG);
+							cursor_x = 8;
+							for(x = 0; x < y; x++)
+							{
+								/*逐字输出*/
+								s[0] = p[x];
+								s[1] = 0;
+								putfonts8_asc_sht(sheet, cursor_x, cursor_y, COL8_FFFFFF, COL8_000000, s, 1);
+								cursor_x += 8;
+								if(cursor_x == 8 + 240)
+								{
+									cursor_x = 8;
+									cursor_y = cons_newline(cursor_y, sheet);
+								}
 							}
 						}
+						else
+						{
+							putfonts8_asc_sht(sheet, 8, cursor_y, COL8_FFFFFF, COL8_000000, "file not found.", 15);
+							cursor_y = cons_newline(cursor_y, sheet);
+						}
+						cursor_y = cons_newline(cursor_y, sheet);
 					}
 					else if(cmdline[0] != 0)
 					{
