@@ -275,3 +275,22 @@ TASK *task_now();
 void  task_add(TASK *task);
 void  task_switchsub();
 void  task_idle();
+
+/* file.c */
+
+void file_readfat(int *fat, unsigned char *img);
+void file_loadfile(int clustno, int size, char *buf, int *fat, char *img);
+
+/* window.c */
+void make_window8(unsigned char *buf, int xsize, int ysize, char *title, char act);
+
+void putfonts8_asc_sht(SHEET *sht, int x, int y, int c, int b, char *s, int l);
+
+void make_textbox8(SHEET *sht, int x0, int y0, int sx, int sy, int c);
+
+void make_wtitle8(unsigned char *buf, int xsize, char *title, char act);
+
+/* console.c */
+void console_task(SHEET *sheet, unsigned int memtotal);
+
+int  cons_newline(int cursor_y, SHEET *sheet);
