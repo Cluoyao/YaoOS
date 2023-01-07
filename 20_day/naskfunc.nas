@@ -209,13 +209,15 @@ mts_fin:
 		RET
 _asm_cons_putchar:
 		STI
+		PUSHAD
 		PUSH    1
 		AND     EAX,0xff                ;将AH和EAX的高位置0，将EAX置为已存入字符编码的状态
 		PUSH    EAX
-		PUSH    DWORD [0x0fec]          ; 读取内存并PUSH该值
+		PUSH    DWORD [0x0fec]          ;读取内存并PUSH该值
 		CALL    _cons_putchar
 		ADD     ESP, 12                 ;将栈中数据丢弃
-		IRETD
+		POPAD
+		IRET
 
 _farcall:                               ; void farcall(int eip, int cs)
 		CALL    FAR [ESP+4] ; eip, cs

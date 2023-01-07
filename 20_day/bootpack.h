@@ -310,3 +310,4 @@ void cmd_ly(CONSOLE *cons);
 void cmd_ls(CONSOLE *cons);
 void cmd_type(CONSOLE *cons, int *fat, char *cmdline);
 void cmd_hlt(CONSOLE *cons, int *fat);
+int  cmd_app(CONSOLE *cons, int *fat, char *cmdline);

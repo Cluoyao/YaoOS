@@ -237,15 +237,20 @@ void cons_runcmd(char *cmdline, CONSOLE *cons, int *fat, unsigned int memtotal)
 	{
 		cmd_type(cons, fat, cmdline);
 	}
-	else if(strcmp(cmdline, "hlt") == 0)
-	{
-		cmd_hlt(cons, fat);
-	}
+	// else if(strcmp(cmdline, "hlt") == 0)
+	// {
+	// 	cmd_hlt(cons, fat);
+	// }
 	else if(cmdline[0] != 0)
 	{
-		putfonts8_asc_sht(cons->sht, CURSOR_INIT_POS, cons->cur_y, COL8_FFFFFF, COL8_000000, "Bad command", 12);
-		cons_newline(cons);
-		cons_newline(cons);
+		if(cmd_app(cons, fat, cmdline) == 0)
+		{
+			/* 不是命令，不是应用程序，也不是空行 */
+			putfonts8_asc_sht(cons->sht, CURSOR_INIT_POS, cons->cur_y, COL8_FFFFFF, COL8_000000, "Bad command", 12);
+			cons_newline(cons);
+			cons_newline(cons);
+		}
+
 	}
 	return ;
 }
@@ -377,4 +382,53 @@ void cmd_hlt(CONSOLE *cons, int *fat)
 	}
 	cons_newline(cons);
 	return;
+}
+
+int cmd_app(CONSOLE *cons, int *fat, char *cmdline)
+{
+	MEMMAN                    *memman = (MEMMAN *)MEMMAN_ADDR;
+	struct SEGMENT_DESCRIPTOR *gdt    = (struct SEGMENT_DESCRIPTOR *)ADR_GDT;
+	FILEINFO                  *finfo;
+	char                       name[18], *p;
+	int                        i;
+
+	/* 根据命令行生成文件名 */
+	for(i = 0; i < 13; i++)
+	{
+		if(cmdline[i] <= ' ') /* 他想表达的是遇到空格就结束，而小于空格的ascii码就是些换行,tab,回车等 */
+		{
+			break;
+		}
+		name[i] = cmdline[i];
+	}
+	name[i] = 0;
+
+	/* 寻找文件 */
+	finfo  = file_search(name, (FILEINFO *)(ADR_DISKIMG + 0x002600), 224);
+	if(finfo == 0 && name[i - 1] != '.')
+	{
+		/* 当找不到文件的时候，在文件后面加上".hrb"继续寻找 */
+		name[i]     = '.';
+		name[i + 1] = 'H';
+		name[i + 2] = 'R';
+		name[i + 3] = 'B';
+		name[i + 4] = 0;
+		finfo       = file_search(name, (FILEINFO *)(ADR_DISKIMG + 0x002600), 224);
+	}
+
+	if(finfo != 0)
+	{
+		/* 分配读入的存储空间 */
+		p = (char *)memman_alloc_4k(memman, finfo->size);
+		file_loadfile(finfo->clustno, finfo->size, p, fat, (char *)(ADR_DISKIMG + 0x003e00));
+		set_segmdesc(gdt + 1003, finfo->size - 1, (int)p, AR_CODE32_ER);
+		//farjmp(0, 1003 * 8);
+		farcall(0, 1003 * 8);
+		memman_free_4k(memman, (int)p, finfo->size);
+		cons_newline(cons);
+		return 1; /* 是应用程序 */
+	}
+
+	return 0;
+
 }
