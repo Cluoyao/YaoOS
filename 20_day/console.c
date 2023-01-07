@@ -237,10 +237,6 @@ void cons_runcmd(char *cmdline, CONSOLE *cons, int *fat, unsigned int memtotal)
 	{
 		cmd_type(cons, fat, cmdline);
 	}
-	// else if(strcmp(cmdline, "hlt") == 0)
-	// {
-	// 	cmd_hlt(cons, fat);
-	// }
 	else if(cmdline[0] != 0)
 	{
 		if(cmd_app(cons, fat, cmdline) == 0)
@@ -352,32 +348,6 @@ void cmd_type(CONSOLE *cons, int *fat, char *cmdline)
 	return;
 }
 
-void cmd_hlt(CONSOLE *cons, int *fat)
-{
-	MEMMAN                    *memman = (MEMMAN *)MEMMAN_ADDR;
-	FILEINFO                  *finfo  = file_search("HLT.HRB", (FILEINFO *)(ADR_DISKIMG + 0x002600), 224);
-	struct SEGMENT_DESCRIPTOR *gdt    = (struct SEGMENT_DESCRIPTOR *)ADR_GDT;
-	char                      *p;
-
-	if(finfo != 0)
-	{
-		/* 分配读入的存储空间 */
-		p = (char *)memman_alloc_4k(memman, finfo->size);
-		file_loadfile(finfo->clustno, finfo->size, p, fat, (char *)(ADR_DISKIMG + 0x003e00));
-		set_segmdesc(gdt + 1003, finfo->size - 1, (int)p, AR_CODE32_ER);
-		//farjmp(0, 1003 * 8);
-		farcall(0, 1003 * 8);
-		memman_free_4k(memman, (int)p, finfo->size);
-	}
-	else
-	{
-		putfonts8_asc_sht(cons->sht, 8, cons->cur_y, COL8_FFFFFF, COL8_000000, "file not found.", 15);
-		cons_newline(cons);
-	}
-	cons_newline(cons);
-	return;
-}
-
 int cmd_app(CONSOLE *cons, int *fat, char *cmdline)
 {
 	MEMMAN                    *memman = (MEMMAN *)MEMMAN_ADDR;
@@ -401,7 +371,7 @@ int cmd_app(CONSOLE *cons, int *fat, char *cmdline)
 	finfo  = file_search(name, (FILEINFO *)(ADR_DISKIMG + 0x002600), 224);
 	if(finfo == 0 && name[i - 1] != '.')
 	{
-		/* 当找不到文件的时候，在文件后面加上".hrb"继续寻找 */
+		/* 当找不到文件的时候，在文件后面加上".hrb"继续寻找, 这里的hrb类似于windows的.exe*/
 		name[i]     = '.';
 		name[i + 1] = 'H';
 		name[i + 2] = 'R';
@@ -415,8 +385,7 @@ int cmd_app(CONSOLE *cons, int *fat, char *cmdline)
 		/* 分配读入的存储空间 */
 		p = (char *)memman_alloc_4k(memman, finfo->size);
 		file_loadfile(finfo->clustno, finfo->size, p, fat, (char *)(ADR_DISKIMG + 0x003e00));
-		set_segmdesc(gdt + 1003, finfo->size - 1, (int)p, AR_CODE32_ER);
-		//farjmp(0, 1003 * 8);
+		set_segmdesc(gdt + 1003, finfo->size - 1, (int)p, AR_CODE32_ER); /* 只是注册了分段的内存 */
 		farcall(0, 1003 * 8);
 		memman_free_4k(memman, (int)p, finfo->size);
 		cons_newline(cons);

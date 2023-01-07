@@ -227,8 +227,8 @@ _asm_hrb_api:
 		STI
 		PUSHAD                          ;用于保存寄存器值的PUSH
 
-		PUSHAD                          ;用于向hrb_api传值的PUSH
-		CALL    _hrb_api
+		PUSHAD                          ;用于向hrb_api传值的PUSH，虽然我们没有显式的给hrb_api传值，不过我们使用PUSHAD将
+		CALL    _hrb_api				;之前寄存器中的值作为了参数值，PUSHAD压入EAX,ECX,EDX,EBX,ESP,EBP,ESI和EDI.
 		ADD     ESP, 32
 		POPAD
 		IRETD
