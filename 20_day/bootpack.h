@@ -292,6 +292,12 @@ void make_textbox8(SHEET *sht, int x0, int y0, int sx, int sy, int c);
 void make_wtitle8(unsigned char *buf, int xsize, char *title, char act);
 
 /* console.c */
+
+typedef struct _CONSOLE_{
+	SHEET *sht;
+	int    cur_x, cur_y, cur_c;
+}CONSOLE;
+
 void console_task(SHEET *sheet, unsigned int memtotal);
 void cons_newline(CONSOLE *cons);
 void cons_putchar(CONSOLE *cons, int chr, char move);

@@ -4,10 +4,6 @@
 
 #define CURSOR_INIT_POS  64
 
-typedef struct _CONSOLE_{
-	SHEET *sht;
-	int    cur_x, cur_y, cur_c;
-}CONSOLE;
 
 void cons_putchar(CONSOLE *cons, int chr, char move)
 {
@@ -19,7 +15,7 @@ void cons_putchar(CONSOLE *cons, int chr, char move)
 	{
 		for(;;)
 		{
-			putfonts8_asc_sht(cons->sht, cons->cur_x, cons->cur_y, COL8_FFFFFF, COL8_000000, " ", 1);
+			putfonts8_asc_sht(cons->sht, cons->cur_x, cons->cur_y, COL8_FFFFFF, COL8_000000, ' ', 1);
 			cons->cur_x += 8;
 			if(cons->cur_x == 8 + 240)
 			{
@@ -62,7 +58,7 @@ void display_prompt(CONSOLE *cons, char *str, char move)
 	int i;
 	for(i = 0; i < len; i++)
 	{
-		cons_putchar(&cons, str[i], move);
+		cons_putchar(cons, str[i], move);
 	}
 	return;
 }
@@ -80,9 +76,11 @@ void console_task(SHEET *sheet, unsigned int memtotal)
 	CONSOLE                    cons;
 	FILEINFO                  *finfo  = (FILEINFO *)(ADR_DISKIMG + 0x002600);
 	int                       *fat    = (int *)memman_alloc_4k(memman, 4 * 2880);
-    struct SEGMENT_DESCRIPTOR *gdt    = (struct SEGMENT_DESCRIPTOR *)ADR_GDT;
+	char                      *prompt = "YaoOS> ";
+    //struct SEGMENT_DESCRIPTOR *gdt    = (struct SEGMENT_DESCRIPTOR *)ADR_GDT;
+
 	cons.sht                          = sheet;
-	cons.cur_x                        = cursor_init_pos;
+	cons.cur_x                        = 8;
 	cons.cur_y                        = 28;
 	cons.cur_c                        = -1;
 
@@ -94,7 +92,7 @@ void console_task(SHEET *sheet, unsigned int memtotal)
 
 	/* 显示提示符 */
 	//putfonts8_asc_sht(sheet, 8, 29, COL8_FFFFFF, COL8_000000, "YaoOs>", 6);
-    display_prompt(&cons, "YaoOs>", 1);
+    display_prompt(&cons, prompt, 1);
 
 	for(;;)
 	{
@@ -162,7 +160,7 @@ void console_task(SHEET *sheet, unsigned int memtotal)
 					/* 执行命令 */
 					cons_runcmd(cmdline, &cons, fat, memtotal);
 					/* 执行完之后显示提示符 */
-					display_prompt(&cons, "YaoOs>", 1);
+					display_prompt(&cons, prompt, 1);
 				}
 				else
 				{
@@ -281,7 +279,7 @@ void cmd_clear(CONSOLE *cons)
 		}
 	}
 	sheet_refresh(cons->sht, 8, 28, 8 + 240, 28 + 128);
-	cons->cur_x = 28;
+	cons->cur_y = 28;
 	return ;
 }
 
@@ -333,7 +331,7 @@ void cmd_ls(CONSOLE *cons)
 void cmd_type(CONSOLE *cons, int *fat, char *cmdline)
 {
 	MEMMAN   *memman          = (MEMMAN *)MEMMAN_ADDR;
-	FILEINFO *finfo = file_search(cmdline + 5, (FILEINFO *)(ADR_DISKIMG + 0x002600), 224);
+	FILEINFO *finfo           = file_search(cmdline + 5, (FILEINFO *)(ADR_DISKIMG + 0x002600), 224);
 	char     *p;
 	int       i;
 	if(finfo != 0)
