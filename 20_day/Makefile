@@ -56,6 +56,7 @@ haribote.img : ipl10.bin haribote.sys Makefile
 		copy from:ipl10.nas to:@: \
 		copy from:make.bat to:@: \
 		copy from:hello.hrb to:@: \
+		copy from:hello2.hrb to:@: \
 		imgout:haribote.img
 
 # 其他指令
