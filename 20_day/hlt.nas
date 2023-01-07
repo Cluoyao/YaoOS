@@ -1,5 +1,6 @@
 [BITS 32]
-		CLI
+		MOV     AL, 'A'
+		CALL    2*8:0xacb
 fin:
 		HLT
 		JMP		fin

@@ -54,6 +54,10 @@ FILEINFO *file_search(char *name, FILEINFO *finfo, int max)
 		}
 		if(name[x] == '.' && y <= 8)
 		{
+			y = 8;
+		}
+		else
+		{
 			s[y] = name[x];
 			if('a' <= s[y] && s[y] <= 'z')
 			{
