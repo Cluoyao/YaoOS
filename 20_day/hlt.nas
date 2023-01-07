@@ -1,6 +1,12 @@
 [BITS 32]
-		MOV     AL, 'A'
+		MOV     AL, 'H'
 		CALL    2*8:0xacb
-fin:
-		HLT
-		JMP		fin
+		MOV     AL, 'e'
+		CALL    2*8:0xacb
+		MOV     AL, 'l'
+		CALL    2*8:0xacb
+		MOV     AL, 'l'
+		CALL    2*8:0xacb
+		MOV     AL, 'o'
+		CALL    2*8:0xacb
+		RETF
