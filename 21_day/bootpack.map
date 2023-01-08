@@ -1,5 +1,5 @@
-text size :  13373(0x0343D)
-data size :  15123(0x03B13)
+text size :  13442(0x03482)
+data size :  15128(0x03B18)
 bss  size :      0(0x00000)
 
 0x00000000 : (.text)
@@ -109,26 +109,26 @@ bss  size :      0(0x00000)
 0x000027B8 : _cmd_ls
 0x0000284E : _cmd_type
 0x000028DE : _cmd_app
-0x000029D0 : _cons_putstr0
-0x000029FE : _cons_putstr1
-0x00002A31 : _hrb_api
-0x00002AA2 : _make_wtitle8
-0x00002AA2 : (.text)
-0x00002B53 : _make_window8
-0x00002C5D : _putfonts8_asc_sht
-0x00002CE4 : _make_textbox8
-0x00002E1A : _file_readfat
-0x00002E1A : (.text)
-0x00002E6C : _file_loadfile
-0x00002ED2 : _file_search
-0x00002F7B : (.text)
-0x00002F7B : _HariStartup
-0x00002F84 : _sprintf
-0x00002F84 : (.text)
-0x00002F98 : (.text)
-0x00002FD4 : _strtoul0
-0x000030A7 : (.text)
-0x000030CF : _vsprintf
+0x00002A15 : _cons_putstr0
+0x00002A43 : _cons_putstr1
+0x00002A76 : _hrb_api
+0x00002AE7 : _make_wtitle8
+0x00002AE7 : (.text)
+0x00002B98 : _make_window8
+0x00002CA2 : _putfonts8_asc_sht
+0x00002D29 : _make_textbox8
+0x00002E5F : _file_readfat
+0x00002E5F : (.text)
+0x00002EB1 : _file_loadfile
+0x00002F17 : _file_search
+0x00002FC0 : (.text)
+0x00002FC0 : _HariStartup
+0x00002FC9 : _sprintf
+0x00002FC9 : (.text)
+0x00002FDD : (.text)
+0x00003019 : _strtoul0
+0x000030EC : (.text)
+0x00003114 : _vsprintf
 0x00000000 : (.data)
 0x00000000 : (.data)
 0x00000000 : (.data)
@@ -155,8 +155,8 @@ bss  size :      0(0x00000)
 0x0031397C : (.data)
 0x00313980 : _taskctl
 0x00313984 : (.data)
-0x00313A13 : (.data)
-0x00313AF3 : (.data)
+0x00313A18 : (.data)
+0x00313AF8 : (.data)
 0x00000000 : (.bss)
 0x00000000 : (.bss)
 0x00000000 : (.bss)
