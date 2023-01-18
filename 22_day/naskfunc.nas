@@ -18,7 +18,7 @@
 		GLOBAL  _asm_inthandler0d, _asm_inthandler0c
 		GLOBAL	_memtest_sub
 		GLOBAL  _farjmp, _farcall
-		GLOBAL  _asm_hrb_api, _start_app
+		GLOBAL  _asm_hrb_api, _start_app, _asm_end_app
 
 		EXTERN	_inthandler20, _inthandler21, _inthandler27, _inthandler2c, _cons_putchar, _hrb_api
 		EXTERN  _inthandler0d, _inthandler0c
@@ -259,6 +259,13 @@ _asm_hrb_api:
 end_app:
 ;	EAX为tss.esp0的地址
 		MOV		ESP,[EAX]
+		POPAD
+		RET			; 返回cmd_app
+
+_asm_end_app:
+;	EAX为tss.esp0的地址
+		MOV		ESP,[EAX]
+		MOV     DWORD [EAX+4],0
 		POPAD
 		RET			; 返回cmd_app
 
