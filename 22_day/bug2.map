@@ -6,8 +6,8 @@ bss  size :      0(0x00000)
 0x00000024 : _HariMain
 0x00000031 : _api_putchar
 0x00000031 : (.text)
-0x0000003D : _api_end
-0x00000044 : _api_putstr0
+0x0000003D : _api_putstr0
+0x0000004B : _api_end
 0x00000052 : _api_openwin
 0x00000074 : _api_putstrwin
 0x0000009C : _api_boxfilwin

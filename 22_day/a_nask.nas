@@ -1,30 +1,34 @@
-[FORMAT "WCOFF"]				; 制作目标文件的模式	
-[INSTRSET "i486p"]				; 使用到486为止的指令
-[BITS 32]					; 3制作32位模式用的机器语言
-[FILE "a_nask.nas"]			        ; 文件名
+[FORMAT "WCOFF"]			; 生成对象文件的模式
+[INSTRSET "i486p"]		; 表示使用486兼容指令集
+[BITS 32]							; 生成32位模式机器语言
+[FILE "a_nask.nas"]		; 源文件名信息
 
-	GLOBAL	_api_putchar, _api_putstr0
-        GLOBAL  _api_end, _api_openwin, _api_putstrwin, _api_boxfilwin
+		GLOBAL	_api_putchar
+		GLOBAL	_api_putstr0
+		GLOBAL	_api_end
+		GLOBAL	_api_openwin
+		GLOBAL	_api_putstrwin
+		GLOBAL	_api_boxfilwin
 
 [SECTION .text]
 
-_api_putchar:                   ;void api_putchar(int c);
-        MOV    EDX, 1
-        MOV    AL, [ESP + 4]
-        INT    0x40
-        RET
+_api_putchar:	; void api_putchar(int c);
+		MOV		EDX,1
+		MOV		AL,[ESP+4]		; c
+		INT		0x40
+		RET
 
-_api_end:                   ;void api_end();
-        MOV    EDX,4
-        INT    0x40
+_api_putstr0:	; void api_putstr0(char *s);
+		PUSH	EBX
+		MOV		EDX,2
+		MOV		EBX,[ESP+8]		; s
+		INT		0x40
+		POP		EBX
+		RET
 
-_api_putstr0:                   ;void api_putstr0(char *s);
-        PUSH    EBX
-        MOV	EDX, 2
-        MOV	EBX,[ESP+8] ; s
-        INT	0x40
-        POP	EBX
-        RET
+_api_end: ; void api_end(void); 
+		MOV			EDX,4
+		INT			0x40
 
 _api_openwin:	; int api_openwin(char *buf, int xsiz, int ysiz, int col_inv, char *title);
 		PUSH	EDI
