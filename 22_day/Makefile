@@ -46,6 +46,9 @@ bootpack.bim : $(OBJS_BOOTPACK) Makefile
 bootpack.hrb : bootpack.bim Makefile
 	$(BIM2HRB) bootpack.bim bootpack.hrb 0
 
+haribote.sys : asmhead.bin bootpack.hrb Makefile
+	copy /B asmhead.bin+bootpack.hrb haribote.sys
+
 hello.hrb : hello.nas Makefile
 	$(NASK) hello.nas hello.hrb hello.lst
 
@@ -59,7 +62,7 @@ a.hrb : a.bim Makefile
 	$(BIM2HRB) a.bim a.hrb 0
 
 hello3.bim : hello3.obj a_nask.obj Makefile
-	$(OBJ2BIM) @$(RULEFILE) out:hello3.bim map:hello3.map hello3.obj a_nask.obj 
+	$(OBJ2BIM) @$(RULEFILE) out:hello3.bim stack:1k map:hello3.map hello3.obj a_nask.obj 
 
 hello3.hrb : hello3.bim Makefile
 	$(BIM2HRB) hello3.bim hello3.hrb 0
@@ -76,11 +79,25 @@ bug2.bim : bug2.obj a_nask.obj Makefile
 bug2.hrb : bug2.bim Makefile
 	$(BIM2HRB) bug2.bim bug2.hrb 0
 
-haribote.sys : asmhead.bin bootpack.hrb Makefile
-	copy /B asmhead.bin+bootpack.hrb haribote.sys
+winhelo.bim : winhelo.obj a_nask.obj Makefile
+	$(OBJ2BIM) @$(RULEFILE) out:winhelo.bim stack:1k map:winhelo.map \
+		winhelo.obj a_nask.obj
+
+winhelo.hrb : winhelo.bim Makefile
+	$(BIM2HRB) winhelo.bim winhelo.hrb 0
+
+winhelo2.bim : winhelo2.obj a_nask.obj Makefile
+	$(OBJ2BIM) @$(RULEFILE) out:winhelo2.bim stack:1k map:winhelo2.map \
+		winhelo2.obj a_nask.obj
+
+winhelo2.hrb : winhelo2.bim Makefile
+	$(BIM2HRB) winhelo2.bim winhelo2.hrb 0
+
+
 
 haribote.img : ipl10.bin haribote.sys Makefile \
-		hello.hrb hello2.hrb a.hrb hello3.hrb bug1.hrb bug2.hrb
+		hello.hrb hello2.hrb a.hrb hello3.hrb bug1.hrb bug2.hrb \
+		winhelo.hrb winhelo2.hrb
 	$(EDIMG)   imgin:../z_tools/fdimg0at.tek \
 		wbinimg src:ipl10.bin len:512 from:0 to:0 \
 		copy from:haribote.sys to:@: \
@@ -92,6 +109,8 @@ haribote.img : ipl10.bin haribote.sys Makefile \
 		copy from:hello3.hrb to:@: \
 		copy from:bug1.hrb to:@: \
 		copy from:bug2.hrb to:@: \
+		copy from:winhelo.hrb to:@: \
+		copy from:winhelo2.hrb to:@: \
 		imgout:haribote.img
 
 # 其他指令

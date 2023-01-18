@@ -356,6 +356,7 @@ int cmd_app(CONSOLE *cons, int *fat, char *cmdline)
 	char                       name[18], *p, *q;
 	TASK                      *task = task_now();
 	int                        i;
+	int                        segsiz, datsiz, esp, dathrb;
 
 	/* 根据命令行生成文件名 */
 	for(i = 0; i < 13; i++)
@@ -385,24 +386,30 @@ int cmd_app(CONSOLE *cons, int *fat, char *cmdline)
 	{
 		/* 分配读入的存储空间 */
 		p = (char *)memman_alloc_4k(memman, finfo->size);
-		q = (char *)memman_alloc_4k(memman, 64 * 1024);
-		*((int *) 0xfe8) = (int)p;
 		file_loadfile(finfo->clustno, finfo->size, p, fat, (char *)(ADR_DISKIMG + 0x003e00));
-		set_segmdesc(gdt + 1003, finfo->size - 1, (int)p, AR_CODE32_ER + 0x60); /* 只是注册了分段的内存 */
-		set_segmdesc(gdt + 1004, 64 * 1024   - 1, (int)q, AR_DATA32_RW + 0x60); /* 只是注册了分段的内存 */
-		if(finfo->size >= 8 && strncmp(p + 4, "Hari", 4) == 0)
+
+		if(finfo->size >= 36 && strncmp(p + 4, "Hari", 4) == 0 && *p == 0x00)
 		{
-			p[0] = 0xe8;
-			p[1] = 0x16;
-			p[2] = 0x00;
-			p[3] = 0x00;
-			p[4] = 0x00;
-			p[5] = 0xcb;
+			segsiz = *((int *)(p + 0x0000));
+			esp    = *((int *)(p + 0x000c));
+			datsiz = *((int *)(p + 0x0010));
+			dathrb = *((int *)(p + 0x0014));
+			q 	   = (char *)memman_alloc_4k(memman, segsiz);
+			*((int *) 0xfe8) = (int)q;
+			set_segmdesc(gdt + 1003, finfo->size - 1, (int)p, AR_CODE32_ER + 0x60); /* 只是注册了分段的内存 */
+			set_segmdesc(gdt + 1004, segsiz      - 1, (int)q, AR_DATA32_RW + 0x60); /* 只是注册了分段的内存 */
+			for(i = 0; i < datsiz; i++)
+			{
+				q[esp + i] = p[dathrb + i];
+			}
+			start_app(0x1b, 1003 * 8, esp, 1004 * 8, &(task->tss.esp0));
+			memman_free_4k(memman, (int)q, segsiz);
 		}
-		//farcall(0, 1003 * 8);
-		start_app(0, 1003 * 8, 64 * 1024, 1004 * 8, &(task->tss.esp0));
+		else
+		{
+			cons_putstr0(cons, ".hrb file format error.\n");
+		}
 		memman_free_4k(memman, (int)p, finfo->size);
-		memman_free_4k(memman, (int)q, 64 * 1024);
 		cons_newline(cons);
 		return 1; /* 是应用程序 */
 	}
@@ -432,24 +439,53 @@ void cons_putstr1(CONSOLE *cons, char *s, int l)
 
 int *hrb_api(int edi, int esi, int ebp, int esp, int ebx, int edx, int ecx, int eax)
 {
-	int      cs_base = *((int *) 0xfe8); 
+	int      ds_base = *((int *) 0xfe8); 
 	TASK    *task    = task_now();
 	CONSOLE *cons    = (CONSOLE *)*((int *)0x0fec);
+	SHTCTL  *shtctl  = (SHTCTL *)*((int *)0x0fe4);
+	SHEET   *sht;
+	int     *reg     = &eax + 1;
+
+	/* 强行改写通过PUSHAD保存的值 */
+	/* reg[0]:edi, reg[1]:esi, reg[2]:ebp, reg[3]:esp */
+	/* reg[4]:ebx, reg[5]:edx, reg[6]:ecx, reg[7]:eax */
+
 	if(edx == 1)
 	{
 		cons_putchar(cons, eax & 0xff, 1);
 	}
 	else if(edx == 2)
 	{
-		cons_putstr0(cons, (char *)ebx + cs_base);
+		cons_putstr0(cons, (char *)ebx + ds_base);
 	}
 	else if(edx == 3)
 	{
-		cons_putstr1(cons, (char *)ebx + cs_base, ecx);
+		cons_putstr1(cons, (char *)ebx + ds_base, ecx);
 	}
 	else if(edx == 4)
 	{
 		return &(task->tss.esp0);
+	}
+	else if(edx == 5)
+	{
+		sht = sheet_alloc(shtctl);
+		sheet_setbuf(sht, (char *)ebx + ds_base, esi, edi, eax);
+		make_window8((char *)ebx + ds_base, esi, edi, (char *)ecx + ds_base, 0);
+		sheet_slide(sht, 100, 50);
+		sheet_updown(sht, 3);
+		reg[7] = (int)sht;
+	}
+	else if(edx == 6)
+	{
+		sht = (SHEET *)ebx;
+		putfonts8_asc(sht->buf, sht->bxsize, esi, edi, eax, (char *)ebp + ds_base);
+		sheet_refresh(sht, esi, edi, esi + ecx * 8, edi + 16);
+	}
+	else if(edx == 7)
+	{
+		sht = (SHEET *)ebx;
+		boxfill8(sht->buf, sht->bxsize, ebp, eax, ecx, esi, edi);
+		sheet_refresh(sht, eax, ecx, esi + 1, edi + 1);
 	}
 	return 0;
 }
