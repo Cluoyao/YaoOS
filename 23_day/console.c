@@ -503,6 +503,12 @@ int *hrb_api(int edi, int esi, int ebp, int esp, int ebx, int edx, int ecx, int 
 		ecx = (ecx + 0x0f) & 0xfffffff0; /* 以16字节为单位进行取整,内存释放大小取整 */
 		memman_free((MEMMAN *)(ebx + ds_base), eax, ecx);
 	}
+	else if(edx == 11)
+	{
+		sht = (SHEET *)ebx;
+		sht->buf[sht->bxsize * edi + esi] = eax;
+		sheet_refresh(sht, esi, edi, esi + 1, edi + 1);
+	}
 	return 0;
 }
 
