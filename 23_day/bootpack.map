@@ -1,4 +1,4 @@
-text size :  14700(0x0396C)
+text size :  14714(0x0397A)
 data size :  15251(0x03B93)
 bss  size :      0(0x00000)
 
@@ -116,25 +116,25 @@ bss  size :      0(0x00000)
 0x00002BE0 : _hrb_api_linewin
 0x00002CAD : _cons_putstr1
 0x00002CE0 : _hrb_api
-0x00002F3F : _inthandler0d
-0x00002F88 : _inthandler0c
-0x00002FD1 : _make_wtitle8
-0x00002FD1 : (.text)
-0x00003082 : _make_window8
-0x0000318C : _putfonts8_asc_sht
-0x00003213 : _make_textbox8
-0x00003349 : _file_readfat
-0x00003349 : (.text)
-0x0000339B : _file_loadfile
-0x00003401 : _file_search
-0x000034AA : (.text)
-0x000034AA : _HariStartup
-0x000034B3 : _sprintf
-0x000034B3 : (.text)
-0x000034C7 : (.text)
-0x00003503 : _strtoul0
-0x000035D6 : (.text)
-0x000035FE : _vsprintf
+0x00002F4D : _inthandler0d
+0x00002F96 : _inthandler0c
+0x00002FDF : _make_wtitle8
+0x00002FDF : (.text)
+0x00003090 : _make_window8
+0x0000319A : _putfonts8_asc_sht
+0x00003221 : _make_textbox8
+0x00003357 : _file_readfat
+0x00003357 : (.text)
+0x000033A9 : _file_loadfile
+0x0000340F : _file_search
+0x000034B8 : (.text)
+0x000034B8 : _HariStartup
+0x000034C1 : _sprintf
+0x000034C1 : (.text)
+0x000034D5 : (.text)
+0x00003511 : _strtoul0
+0x000035E4 : (.text)
+0x0000360C : _vsprintf
 0x00000000 : (.data)
 0x00000000 : (.data)
 0x00000000 : (.data)

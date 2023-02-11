@@ -128,6 +128,7 @@ lines.bim : lines.obj a_nask.obj Makefile
 lines.hrb : lines.bim Makefile
 	$(BIM2HRB) lines.bim lines.hrb 47k
 
+
 haribote.img : ipl10.bin haribote.sys Makefile \
 		hello.hrb hello2.hrb a.hrb hello3.hrb bug1.hrb bug2.hrb \
 		winhelo.hrb winhelo2.hrb winhelo3.hrb star1.hrb stars.hrb \
