@@ -1,4 +1,4 @@
-text size :    285(0x0011D)
+text size :    319(0x0013F)
 data size :     14(0x0000E)
 bss  size :      0(0x00000)
 
@@ -15,8 +15,9 @@ bss  size :      0(0x00000)
 0x000000EC : _api_malloc
 0x00000101 : _api_free
 0x0000011A : _api_point
-0x00000138 : (.text)
-0x00000138 : _HariStartup
+0x00000138 : _api_refreshwin
+0x0000015A : (.text)
+0x0000015A : _HariStartup
 0x00000000 : (.data)
 0x00000000 : (.data)
 0x00000400 : (.data)
