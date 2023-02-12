@@ -163,6 +163,22 @@ int          memman_free_4k(MEMMAN *man, unsigned int addr, unsigned int size);
 #define MAX_SHEETS         256
 #define SHEET_USE          1
 
+typedef struct _TSS32_
+{
+	int backlink, esp0, ss0, esp1, ss1, esp2, ss2, cr3; /* 任务切换状态 */
+	int eip, eflags, eax, ecx, edx, ebx, esp, ebp, esi, edi; /* 32位寄存器 */
+	int es, cs, ss, ds, fs, gs; /* 16位寄存器 */
+	int ldtr, iomap; /* 任务状态记录 */
+}TSS32; /* 104字节 */
+
+typedef struct _TASK_
+{
+	int     sel, flags;   /* sel用来存放GDT的编号 */
+	int     level, priority;
+	FIFO32  fifo;
+	TSS32   tss;
+}TASK;
+
 typedef struct _SHEET_
 {
     unsigned char *buf;
@@ -174,6 +190,7 @@ typedef struct _SHEET_
                    height,   // 图层高度(代表三维上的高度，比如有三个图层，如果是最上面的图层，那高度就是3（2？）)
                    flags;    // 图层的设定信息
 	void          *ctl;
+	TASK          *task;
 }SHEET;
 
 typedef struct _SHTCTL_
@@ -227,24 +244,24 @@ void   inthandler20(int *esp);
 #define MAX_TASKS_LV   100
 #define MAX_TASKLEVELS 10
 
-typedef struct _TSS32_
-{
-	int backlink, esp0, ss0, esp1, ss1, esp2, ss2, cr3; /* 任务切换状态 */
-	int eip, eflags, eax, ecx, edx, ebx, esp, ebp, esi, edi; /* 32位寄存器 */
-	int es, cs, ss, ds, fs, gs; /* 16位寄存器 */
-	int ldtr, iomap; /* 任务状态记录 */
-}TSS32; /* 104字节 */
+// typedef struct _TSS32_
+// {
+// 	int backlink, esp0, ss0, esp1, ss1, esp2, ss2, cr3; /* 任务切换状态 */
+// 	int eip, eflags, eax, ecx, edx, ebx, esp, ebp, esi, edi; /* 32位寄存器 */
+// 	int es, cs, ss, ds, fs, gs; /* 16位寄存器 */
+// 	int ldtr, iomap; /* 任务状态记录 */
+// }TSS32; /* 104字节 */
 
 extern TIMER *task_timer;
 extern int    mt_tr;
 
-typedef struct _TASK_
-{
-	int     sel, flags;   /* sel用来存放GDT的编号 */
-	int     level, priority;
-	FIFO32  fifo;
-	TSS32   tss;
-}TASK;
+// typedef struct _TASK_
+// {
+// 	int     sel, flags;   /* sel用来存放GDT的编号 */
+// 	int     level, priority;
+// 	FIFO32  fifo;
+// 	TSS32   tss;
+// }TASK;
 
 typedef struct _TASKLEVEL_
 {
@@ -300,6 +317,7 @@ void make_wtitle8(unsigned char *buf, int xsize, char *title, char act);
 typedef struct _CONSOLE_{
 	SHEET *sht;
 	int    cur_x, cur_y, cur_c;
+	TIMER *timer;
 }CONSOLE;
 
 void console_task(SHEET *sheet, unsigned int memtotal);

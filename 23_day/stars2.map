@@ -1,4 +1,4 @@
-text size :    546(0x00222)
+text size :    558(0x0022E)
 data size :     12(0x0000C)
 bss  size :      0(0x00000)
 
@@ -18,10 +18,11 @@ bss  size :      0(0x00000)
 0x000001C4 : _api_refreshwin
 0x000001E6 : _api_linewin
 0x0000020E : _api_closewin
-0x0000021C : (.text)
-0x0000021C : _HariStartup
-0x00000225 : _rand
-0x00000225 : (.text)
+0x0000021C : _api_getkey
+0x00000228 : (.text)
+0x00000228 : _HariStartup
+0x00000231 : _rand
+0x00000231 : (.text)
 0x00000000 : (.data)
 0x00000000 : (.data)
 0x00000400 : (.data)

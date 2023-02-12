@@ -46,6 +46,7 @@ SHEET* sheet_alloc(SHTCTL *ctl)
             sht         = &ctl->sheets0[i];
             sht->flags  = SHEET_USE;            /* 标记为正在使用 */
             sht->height = -1;                   /* 高度设置为-1，表示图层的高度还没有设置，因而不是显示对象，隐藏 */
+            sht->task   = 0; /* 不使用自动关闭的功能 */
             return sht;
         }
     }
