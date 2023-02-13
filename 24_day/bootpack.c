@@ -27,6 +27,8 @@ void HariMain(void)
 	int                        key_to = 0, key_shift = 0, key_leds = (binfo->leds >> 4) & 7, keycmd_wait = -1;
 	int                        key_capslk = 0;
 	CONSOLE                   *cons;
+	int                        j, x, y;
+	SHEET					  *sht;
 	
 
 	static char keytable0[0x80] = {
@@ -309,6 +311,27 @@ void HariMain(void)
 					{
 						/* 按下左键，移动sht_win,因为原点在左上角，-80是将窗口起点相对鼠标往左偏，-8是往上偏 */
 						sheet_slide(sht_win, mx - 80, my - 8);
+					}
+
+					if((mdec.btn & 0x01) != 0)
+					{
+						/* 按下左键 */
+						/* 按照从上到下的顺序寻找鼠标所指向的图层 */
+						for(j = shtctl->top - 1; j > 0; j--)
+						{
+							sht = shtctl->sheets[j];
+							x   = mx - sht->vx0;
+							y   = my - sht->vy0;
+							if(0 <= x && x < sht->bxsize && 0 <= y && y < sht->bysize)
+							{
+								/* 说明在该图层中 */
+								if(sht->buf[y * sht->bxsize + x] != sht->col_inv) /* 如果不是背景颜色 */
+								{
+									sheet_updown(sht, shtctl->top - 1); /* 把该图层提升 */
+									break;
+								}
+							}
+						}
 					}
 				}
 			}
