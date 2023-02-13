@@ -27,8 +27,8 @@ void HariMain(void)
 	int                        key_to = 0, key_shift = 0, key_leds = (binfo->leds >> 4) & 7, keycmd_wait = -1;
 	int                        key_capslk = 0;
 	CONSOLE                   *cons;
-	int                        j, x, y;
-	SHEET					  *sht;
+	int                        j, x, y, mmx = -1, mmy = -1;
+	SHEET					  *sht = 0;
 	
 
 	static char keytable0[0x80] = {
@@ -315,23 +315,59 @@ void HariMain(void)
 
 					if((mdec.btn & 0x01) != 0)
 					{
-						/* 按下左键 */
-						/* 按照从上到下的顺序寻找鼠标所指向的图层 */
-						for(j = shtctl->top - 1; j > 0; j--)
+						if(mmx < 0)
 						{
-							sht = shtctl->sheets[j];
-							x   = mx - sht->vx0;
-							y   = my - sht->vy0;
-							if(0 <= x && x < sht->bxsize && 0 <= y && y < sht->bysize)
+							/* 如果处于通常的模式 */
+							/* 按照从上到下的顺序寻找鼠标所指向的图层 */
+							for(j = shtctl->top - 1; j > 0; j--)
 							{
-								/* 说明在该图层中 */
-								if(sht->buf[y * sht->bxsize + x] != sht->col_inv) /* 如果不是背景颜色 */
+								sht = shtctl->sheets[j];
+								x   = mx - sht->vx0;
+								y   = my - sht->vy0;
+								if(0 <= x && x < sht->bxsize && 0 <= y && y < sht->bysize)
 								{
-									sheet_updown(sht, shtctl->top - 1); /* 把该图层提升 */
-									break;
+									/* 说明在该图层中 */
+									if(sht->buf[y * sht->bxsize + x] != sht->col_inv) /* 如果不是背景颜色 */
+									{
+										sheet_updown(sht, shtctl->top - 1); /* 把该图层提升 */
+										if(3 <= x && x < sht->bxsize - 3 && 3 <= y && y < 21)
+										{
+											/* 鼠标按着标题栏区域 */
+											mmx = mx;
+											mmy = my;
+										}
+										if(sht->bxsize - 21 <= x && x < sht->bxsize - 5 && 5 <= y && y < 19)
+										{
+											/* 点击X按钮 */
+											if(sht->task != 0) 
+											{
+												/* 该窗口若为应用程序窗口 */
+												cons = (CONSOLE *)*((int *) 0xfec);
+												cons_putstr0(cons, "\nBreak(mouse): \n");
+												io_cli();
+												task_cons->tss.eax = (int)&(task_cons->tss.esp0);
+												task_cons->tss.eip = (int)asm_end_app;
+												io_sti();
+											}
+										}
+										break;
+									}
 								}
 							}
 						}
+						else
+						{
+							/* 如果处于窗口移动模式 */
+							x   = mx - mmx; /* 计算鼠标的移动距离 */
+							y   = my - mmy;
+							sheet_slide(sht, sht->vx0 + x, sht->vy0 + y);
+							mmx = mx; /* 更新为移动后的坐标 */
+							mmy = my;
+						}
+					}
+					else
+					{
+						mmx = -1;
 					}
 				}
 			}
