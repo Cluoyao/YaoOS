@@ -312,6 +312,8 @@ void make_textbox8(SHEET *sht, int x0, int y0, int sx, int sy, int c);
 
 void make_wtitle8(unsigned char *buf, int xsize, char *title, char act);
 
+void change_wtitle8(SHEET *sht, char act);
+
 /* console.c */
 
 typedef struct _CONSOLE_{
@@ -334,3 +336,7 @@ int  cmd_app(CONSOLE *cons, int *fat, char *cmdline);
 void cons_putstr0(CONSOLE *cons, char *s);
 void cons_putstr1(CONSOLE *cons, char *s, int l);
 int *hrb_api(int edi, int esi, int ebp, int esp, int ebx, int edx, int ecx, int eax);
+
+
+int keywin_off(SHEET *key_win, SHEET *sht_win, int cur_c, int cur_x);
+int keywin_on(SHEET *key_win, SHEET *sht_win, int cur_c);
