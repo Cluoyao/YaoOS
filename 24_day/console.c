@@ -417,6 +417,7 @@ int cmd_app(CONSOLE *cons, int *fat, char *cmdline)
 				}
 			}
 
+			timer_cancelall(&task->fifo);
 			memman_free_4k(memman, (int)q, segsiz);
 		}
 		else
@@ -649,13 +650,33 @@ int *hrb_api(int edi, int esi, int ebp, int esp, int ebx, int edx, int ecx, int 
 			{
 				cons->cur_c = -1;
 			}
-			if(256 <= i && i <= 511)
+			if(256 <= i) /*键盘数据通过任务a*/
 			{
 				reg[7] = i - 256;
 				return 0;
 			}
 			
 		}
+	}
+	else if(edx == 16)/*获取定时器*/
+	{
+		reg[7] = (int)timer_alloc();
+		((TIMER *) reg[7])->flags2 = 1; /*允许自动取消*/
+	}
+	else if(edx == 17)/*设置定时器的发送数据*/
+	{
+		/*调用系统接口*/
+		timer_init((TIMER*)ebx, &task->fifo, eax + 256);
+	}
+	else if(edx == 18)/*定时器时间设定*/
+	{
+		/*调用系统接口*/
+		timer_settime((TIMER *)ebx, eax);
+	}
+	else if(edx == 19) /*释放定时器*/
+	{
+		/*调用系统接口*/
+		timer_free((TIMER*)ebx);
 	}
 	return 0;
 }

@@ -220,7 +220,7 @@ typedef struct _TIMER_
 {
 	/* data */
 	struct _TIMER_ *next;
-	unsigned int    timeout, flags; /* flag 用于记录各个定时器的状态 */
+	unsigned int    timeout, flags, flags2; /* flag 用于记录各个定时器的状态 */
 	FIFO32         *fifo;
 	int             data;
 }TIMER;
@@ -236,6 +236,8 @@ TIMER *timer_alloc(void);
 void   timer_free(TIMER *timer);
 void   timer_init(TIMER *timer, FIFO32 *fifo, int data);
 void   timer_settime(TIMER *timer, unsigned int timeout);
+int    timer_cancel(TIMER *timer);
+void   timer_cancelall(FIFO32 *fifo);
 void   inthandler20(int *esp);
 
 /* multitask */

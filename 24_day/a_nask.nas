@@ -17,6 +17,10 @@
 		GLOBAL  _api_linewin
 		GLOBAL	_api_closewin
 		GLOBAL  _api_getkey
+		GLOBAL  _api_alloctimer
+		GLOBAL  _api_inittimer
+		GLOBAL  _api_settimer
+		GLOBAL  _api_freetimer
 
 [SECTION .text]
 
@@ -184,5 +188,36 @@ _api_closewin:	;void api_closewin(int win);
 _api_getkey:	; int api_getkey(int mode)
 		MOV		EDX,15
 		MOV		EAX,[ESP+4]	;mode
+		INT		0x40   
+		RET
+
+_api_alloctimer:	; int api_alloctimer(void)
+		MOV		EDX,16
+		INT		0x40   ;系统函数调用
+		RET
+
+_api_inittimer:		; void api_inittimer(int timer, int data);
+		PUSH	EBX
+		MOV		EDX,17
+		MOV		EBX,[ESP+8]
+		MOV		EAX,[ESP+12]
+		INT		0x40
+		POP		EBX
+		RET
+
+_api_settimer:		;void api_settimer(int timer, int time);
+		PUSH	EBX
+		MOV		EDX,18
+		MOV		EBX,[ESP+8]
+		MOV		EAX,[ESP+12]
+		INT		0x40
+		POP		EBX
+		RET
+
+_api_freetimer:		;void api_freetimer(int timer);
+		PUSH	EBX
+		MOV		EDX,19
+		MOV		EBX,[ESP+8]
 		INT		0x40
 		RET
+
