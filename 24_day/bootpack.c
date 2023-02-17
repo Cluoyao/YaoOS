@@ -110,9 +110,7 @@ void HariMain(void)
 	timer_init(timer, &fifo,  1);
 	timer_settime(timer, 50);
 
-	key_win          = sht_win;
-	sht_cons->task   = task_cons;
-	sht_cons->flags |= 0x20;        /* 有光标 */
+
 
 	/* sht_mouse */
 	sht_mouse = sheet_alloc(shtctl); /* 从管理单元拿出一个图层来用，作为鼠标图层 */
@@ -134,6 +132,9 @@ void HariMain(void)
 	sheet_updown(sht_cons,      1);
 	sheet_updown(sht_win,       2);
 	sheet_updown(sht_mouse,     3);
+	key_win          = sht_win;
+	sht_cons->task   = task_cons;
+	sht_cons->flags |= 0x20;        /* 有光标 */
 
 	for (;;) 
 	{
@@ -173,21 +174,7 @@ void HariMain(void)
 				{
 					s[0] = 0;
 				}
-				if(i == 256 + 0x57 && shtctl->top > 2)
-				{
-					/* F11 */
-					sheet_updown(shtctl->sheets[1], shtctl->top - 1); /* top 存放的是最上面的高度，给绘制鼠标用的 */
-				}
-				if(i == 256 + 0x3b && key_shift != 0 && task_cons->tss.ss0 != 0)
-				{
-					/* shift + f1 */
-					cons = (CONSOLE *)*((int *) 0x0fec);
-					cons_putstr0(cons, "\nBreak(key):\n");
-					io_cli(); /* 不能在改变寄存器值时切换到其他任务 */
-					task_cons->tss.eax = (int) &(task_cons->tss.esp0);
-					task_cons->tss.eip = (int) asm_end_app;
-					io_sti();
-				}
+
 				if('A' <= s[0] && s[0] <= 'Z')
 				{
 					/* 当输入字符为英文字母时 */
@@ -211,7 +198,7 @@ void HariMain(void)
 					}
 					else
 					{
-						fifo32_put(&task_cons->fifo, s[0] + 256);
+						fifo32_put(&key_win->task->fifo, s[0] + 256);
 					}
 				}
 				if(i == 256 + 0x0e) /*退格键*/
@@ -228,11 +215,11 @@ void HariMain(void)
 					else
 					{
 						/*发送至命令行窗口*/
-						fifo32_put(&task_cons->fifo, 8 + 256);
+						fifo32_put(&key_win->task->fifo, 8 + 256);
 					}
 
 				}
-				if(i == 256 + 0x1c)
+				if(i == 256 + 0x1c) /*回车键*/
 				{
 					if(key_win != sht_win)
 					{
@@ -273,14 +260,28 @@ void HariMain(void)
 					key_shift &= ~2;
 				}
 
-				if(i == 256 + 0x1c) /* 回车键 */
+				if(i == 256 + 0x3b && key_shift != 0 && task_cons->tss.ss0 != 0)
 				{
-					if(key_to != 0) /* 发送给命令行 */
-					{
-						fifo32_put(&task_cons->fifo, 10 + 256);
-					}
+					/* shift + f1 */
+					cons = (CONSOLE *)*((int *) 0x0fec);
+					cons_putstr0(cons, "\nBreak(key):\n");
+					io_cli(); /* 不能在改变寄存器值时切换到其他任务 */
+					task_cons->tss.eax = (int) &(task_cons->tss.esp0);
+					task_cons->tss.eip = (int) asm_end_app;
+					io_sti();
 				}
-
+				if(i == 256 + 0x57 && shtctl->top > 2)
+				{
+					/* F11 */
+					sheet_updown(shtctl->sheets[1], shtctl->top - 1); /* top 存放的是最上面的高度，给绘制鼠标用的 */
+				}
+				if (i == 256 + 0xfa) { /*键盘成功接收到数据*/
+					keycmd_wait = -1;
+				}
+				if (i == 256 + 0xfe) { /*键盘没有成功接收到数据*/
+					wait_KBC_sendready();
+					io_out8(PORT_KEYDAT, keycmd_wait);
+				}
 				/* 重新显示光标 */
 				if(cursor_c >= 0)
 				{
@@ -312,14 +313,8 @@ void HariMain(void)
 					{
 						my = binfo->scrny - 1;
 					}
-					sprintf(s, "(%3d, %3d)", mx, my);
-					putfonts8_asc_sht(sht_back, 0, 0, COL8_FFFFFF, COL8_008484, s, 10);
-					sheet_slide(sht_mouse, mx, my);
-					if((mdec.btn & 0x01) != 0)
-					{
-						/* 按下左键，移动sht_win,因为原点在左上角，-80是将窗口起点相对鼠标往左偏，-8是往上偏 */
-						sheet_slide(sht_win, mx - 80, my - 8);
-					}
+
+					sheet_slide(sht_mouse, mx, my);/* 包含sheet_refresh含sheet_refresh */
 
 					if((mdec.btn & 0x01) != 0)
 					{
@@ -338,6 +333,12 @@ void HariMain(void)
 									if(sht->buf[y * sht->bxsize + x] != sht->col_inv) /* 如果不是背景颜色 */
 									{
 										sheet_updown(sht, shtctl->top - 1); /* 把该图层提升 */
+										if(sht != key_win)
+										{
+											cursor_c = keywin_off(key_win, sht_win, cursor_c, cursor_x);
+											key_win  = sht;
+											cursor_c = keywin_on(key_win, sht_win, cursor_c);
+										}
 										if(3 <= x && x < sht->bxsize - 3 && 3 <= y && y < 21)
 										{
 											/* 鼠标按着标题栏区域 */
