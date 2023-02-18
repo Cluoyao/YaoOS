@@ -173,10 +173,12 @@ typedef struct _TSS32_
 
 typedef struct _TASK_
 {
-	int     sel, flags;   /* sel用来存放GDT的编号 */
-	int     level, priority;
-	FIFO32  fifo;
-	TSS32   tss;
+	int               sel, flags;   /* sel用来存放GDT的编号 */
+	int               level, priority;
+	FIFO32            fifo;
+	TSS32             tss;
+	struct _CONSOLE_ *cons;
+	int               ds_base;
 }TASK;
 
 typedef struct _SHEET_

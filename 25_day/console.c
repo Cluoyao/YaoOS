@@ -83,7 +83,7 @@ void console_task(SHEET *sheet, unsigned int memtotal)
 	cons.cur_x                        = 8;
 	cons.cur_y                        = 28;
 	cons.cur_c                        = -1;
-	*((int *)0x0fec)                  = (int)&cons;
+	task->cons                        = (int)&cons;
 
 	fifo32_init(&task->fifo, 128, fifobuf, task);
 	timer = timer_alloc();
@@ -397,14 +397,14 @@ int cmd_app(CONSOLE *cons, int *fat, char *cmdline)
 			datsiz = *((int *)(p + 0x0010));
 			dathrb = *((int *)(p + 0x0014));
 			q 	   = (char *)memman_alloc_4k(memman, segsiz);
-			*((int *) 0xfe8) = (int)q;
-			set_segmdesc(gdt + 1003, finfo->size - 1, (int)p, AR_CODE32_ER + 0x60); /* 只是注册了分段的内存 */
-			set_segmdesc(gdt + 1004, segsiz      - 1, (int)q, AR_DATA32_RW + 0x60); /* 只是注册了分段的内存 */
+			task->ds_base = (int)q;
+			set_segmdesc(gdt + task->sel / 8 + 1000, finfo->size - 1, (int)p, AR_CODE32_ER + 0x60); /* 只是注册了分段的内存 */
+			set_segmdesc(gdt + task->sel / 8 + 2000, segsiz      - 1, (int)q, AR_DATA32_RW + 0x60); /* 只是注册了分段的内存 */
 			for(i = 0; i < datsiz; i++)
 			{
 				q[esp + i] = p[dathrb + i];
 			}
-			start_app(0x1b, 1003 * 8, esp, 1004 * 8, &(task->tss.esp0));
+			start_app(0x1b, task->sel + 1000 * 8, esp, task->sel + 2000 * 8, &(task->tss.esp0));
 			
 			shtctl = (SHTCTL *)*((int *)0xfe4);
 			for(i = 0; i < MAX_SHEETS; i++)
@@ -515,10 +515,11 @@ void cons_putstr1(CONSOLE *cons, char *s, int l)
 
 int *hrb_api(int edi, int esi, int ebp, int esp, int ebx, int edx, int ecx, int eax)
 {
-	int      ds_base = *((int *) 0xfe8); 
+	
 	TASK    *task    = task_now();
-	CONSOLE *cons    = (CONSOLE *)*((int *)0x0fec);
+	CONSOLE *cons    = task->cons;
 	SHTCTL  *shtctl  = (SHTCTL *)*((int *)0x0fe4);
+	int      ds_base = task->ds_base; 
 	SHEET   *sht;
 	int     *reg     = &eax + 1;
 	int      i;
@@ -550,8 +551,8 @@ int *hrb_api(int edi, int esi, int ebp, int esp, int ebx, int edx, int ecx, int 
 		sht->flags |= 0x10;
 		sheet_setbuf(sht, (char *)ebx + ds_base, esi, edi, eax);
 		make_window8((char *)ebx + ds_base, esi, edi, (char *)ecx + ds_base, 0);
-		sheet_slide(sht, 100, 50);
-		sheet_updown(sht, 3);
+		sheet_slide(sht, (shtctl->xsize - esi) / 2, (shtctl->ysize - edi) / 2);
+		sheet_updown(sht, shtctl->top); /*将窗口图层高度指定为当前鼠标所在图层的高度，鼠标移到上层*/
 		reg[7] = (int)sht;
 	}
 	else if(edx == 6)
@@ -683,8 +684,8 @@ int *hrb_api(int edi, int esi, int ebp, int esp, int ebx, int edx, int ecx, int 
 
 int *inthandler0d(int *esp)
 {
-	CONSOLE *cons = (CONSOLE *)*((int *)0x0fec);
 	TASK    *task = task_now();
+	CONSOLE *cons = task->cons;
 	char     s[30];
 	cons_putstr0(cons, "\nINT 0D :\n General Protected Exception.\n");
 	sprintf(s, "EIP = %08X\n", esp[11]);
@@ -694,8 +695,8 @@ int *inthandler0d(int *esp)
 
 int *inthandler0c(int *esp)
 {
-	CONSOLE *cons = (CONSOLE *)*((int *)0x0fec);
 	TASK    *task = task_now();
+	CONSOLE *cons = task->cons;
 	char     s[30];
 	cons_putstr0(cons, "\nINT 0C :\n Stack Exception.\n");
 	sprintf(s, "EIP = %08X\n", esp[11]);
