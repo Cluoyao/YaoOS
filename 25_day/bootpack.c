@@ -23,7 +23,7 @@ void HariMain(void)
 	SHTCTL                    *shtctl;
 	SHEET                     *sht_back, *sht_mouse, *sht_win,  *sht_cons[2];
 	unsigned char             *buf_back, buf_mouse[256], *buf_win, *buf_cons[2];
-	TASK                      *task_a, *task_cons[2];
+	TASK                      *task_a, *task_cons[2], *task;
 	int                        key_to = 0, key_shift = 0, key_leds = (binfo->leds >> 4) & 7, keycmd_wait = -1;
 	int                        key_capslk = 0;
 	CONSOLE                   *cons;
@@ -268,15 +268,18 @@ void HariMain(void)
 					key_shift &= ~2;
 				}
 
-				if(i == 256 + 0x3b && key_shift != 0 && task_cons[0]->tss.ss0 != 0)
+				if(i == 256 + 0x3b && key_shift != 0)
 				{
 					/* shift + f1 */
-					cons = (CONSOLE *)*((int *) 0x0fec);
-					cons_putstr0(cons, "\nBreak(key):\n");
-					io_cli(); /* 不能在改变寄存器值时切换到其他任务 */
-					task_cons[0]->tss.eax = (int) &(task_cons[0]->tss.esp0);
-					task_cons[0]->tss.eip = (int) asm_end_app;
-					io_sti();
+					task = key_win->task;
+					if(task != 0 && task->tss.ss0 != 0)
+					{
+						cons_putstr0(task->cons, "\nBreak(key):\n");
+						io_cli(); /* 不能在改变寄存器值时切换到其他任务 */
+						task->tss.eax = (int) &(task_cons[0]->tss.esp0);
+						task->tss.eip = (int) asm_end_app;
+						io_sti();
+					}
 				}
 				if(i == 256 + 0x57 && shtctl->top > 2)
 				{
@@ -359,11 +362,11 @@ void HariMain(void)
 											if((sht->flags & 0x10) != 0) 
 											{
 												/* 该窗口若为应用程序窗口 */
-												cons = (CONSOLE *)*((int *) 0xfec);
-												cons_putstr0(cons, "\nBreak(mouse): \n");
+												task = sht->task;
+												cons_putstr0(task->cons, "\nBreak(mouse): \n");
 												io_cli();
-												task_cons[0]->tss.eax = (int)&(task_cons[0]->tss.esp0);
-												task_cons[0]->tss.eip = (int)asm_end_app;
+												task->tss.eax = (int)&(task->tss.esp0);
+												task->tss.eip = (int)asm_end_app;
 												io_sti();
 											}
 										}
