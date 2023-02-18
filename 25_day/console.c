@@ -65,16 +65,15 @@ void display_prompt(CONSOLE *cons, char *str, char move)
 
 void console_task(SHEET *sheet, unsigned int memtotal)
 {
-	TIMER                     *timer;
+	//TIMER                     *timer;
 	TASK                      *task            = task_now();
 	MEMMAN                    *memman          = (MEMMAN *)MEMMAN_ADDR;
 	int                        cursor_init_pos = CURSOR_INIT_POS;
-	int                        i, fifobuf[128];
+	int                        i;
 	char                       s[30];
 	int                        x,y;
 	char                       cmdline[30], *p;
 	CONSOLE                    cons;
-	FILEINFO                  *finfo  = (FILEINFO *)(ADR_DISKIMG + 0x002600);
 	int                       *fat    = (int *)memman_alloc_4k(memman, 4 * 2880);
 	char                      *prompt = "YaoOS> ";
     //struct SEGMENT_DESCRIPTOR *gdt    = (struct SEGMENT_DESCRIPTOR *)ADR_GDT;
@@ -85,10 +84,9 @@ void console_task(SHEET *sheet, unsigned int memtotal)
 	cons.cur_c                        = -1;
 	task->cons                        = (int)&cons;
 
-	fifo32_init(&task->fifo, 128, fifobuf, task);
-	timer = timer_alloc();
-	timer_init(timer, &task->fifo, 1);
-	timer_settime(timer, 50);
+	cons.timer = timer_alloc();
+	timer_init(cons.timer, &task->fifo, 1);
+	timer_settime(cons.timer, 50);
 	file_readfat(fat, (unsigned char*)(ADR_DISKIMG + 0x000200));
 
 	/* 显示提示符 */
@@ -111,7 +109,7 @@ void console_task(SHEET *sheet, unsigned int memtotal)
 			{
 				if(i != 0)
 				{
-					timer_init(timer, &task->fifo, 0); /* 下次置0 */
+					timer_init(cons.timer, &task->fifo, 0); /* 下次置0 */
 					if(cons.cur_c >= 0) /* 光标其实还是在闪，只是没有颜色 */
 					{
 						cons.cur_c = COL8_FFFFFF;
@@ -120,14 +118,14 @@ void console_task(SHEET *sheet, unsigned int memtotal)
 				}
 				else
 				{
-					timer_init(timer, &task->fifo, 1);
+					timer_init(cons.timer, &task->fifo, 1);
 					if(cons.cur_c >= 0) /* 光标其实还是在闪，只是没有颜色 */
 					{
 						cons.cur_c = COL8_000000;
 					}
 
 				}
-				timer_settime(timer, 50);
+				timer_settime(cons.timer, 50);
 			}
 			if(i == 2)
 			{
@@ -174,7 +172,7 @@ void console_task(SHEET *sheet, unsigned int memtotal)
 				}
 			}
 			/* 重新显示光标 */	
-			if(cons.cur_x >= 0)
+			if(cons.cur_c >= 0)
 			{
 				boxfill8(sheet->buf, sheet->bxsize, cons.cur_c, cons.cur_x, cons.cur_y, cons.cur_x + 7, cons.cur_y + 15);
 			}			

@@ -342,5 +342,5 @@ void cons_putstr1(CONSOLE *cons, char *s, int l);
 int *hrb_api(int edi, int esi, int ebp, int esp, int ebx, int edx, int ecx, int eax);
 
 
-int keywin_off(SHEET *key_win, SHEET *sht_win, int cur_c, int cur_x);
-int keywin_on(SHEET *key_win, SHEET *sht_win, int cur_c);
+void keywin_off(SHEET *key_win);
+void keywin_on(SHEET *key_win);
