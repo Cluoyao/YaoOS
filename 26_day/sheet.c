@@ -257,7 +257,7 @@ void sheet_refreshsub(SHTCTL *ctl, int vx0, int vy0, int vx1, int vy1, int h0, i
 /* vx0,vy0:移动前的位置；vx1,vy1:移动后的位置 */
 void sheet_refreshmap(SHTCTL *ctl, int vx0, int vy0, int vx1, int vy1, int h0)
 {
-    int            h, bx, by, vx, vy, bx0, by0, bx1, by1;
+    int            h, bx, by, vx, vy, bx0, by0, bx1, by1, sid4, *p;
     unsigned char *buf, sid, *map = ctl->map;
     SHEET         *sht;
 
@@ -284,21 +284,59 @@ void sheet_refreshmap(SHTCTL *ctl, int vx0, int vy0, int vx1, int vy1, int h0)
         if(bx1 > sht->bxsize){bx1 = sht->bxsize;}
         if(by1 > sht->bysize){by1 = sht->bysize;}
 
-        for(by = by0; by < by1; by++)
+        if(sht->col_inv == -1)
         {
-            vy = sht->vy0 + by;
-            for(bx = bx0; bx < bx1; bx++)
-            {
-                vx = sht->vx0 + bx;
 
-                if(buf[by * sht->bxsize + bx] != sht->col_inv)
+            if((sht->vx0 & 3) == 0 && (bx0 & 3) == 0 && (bx1 & 3) == 0)
+            {
+                /*无透明色图层专用的高速版，4字节型*/
+                bx1  = (bx1 - bx0) / 4;
+                /*组装到一起*/
+                sid4 = sid | sid << 8 | sid << 16 | sid << 24;
+                for(by = by0; by < by1; by++)
                 {
+                    vy = sht->vy0 + by;
+                    vx = sht->vx0 + bx0; /*bx0会是4的倍数*/
+                    p  = (int *)&map[vy * ctl->xsize + vx];
+                    for(bx = 0; bx < bx1; bx++)
+                    {
+                        /*一次写4个字节*/
+                        p[bx] = sid4;
+                    }
+                }
+            }
+
+            /*如果没有透明图层*/
+            for(by = by0; by < by1; by++)
+            {
+                vy = sht->vy0 + by;
+                for(bx = bx0; bx < bx1; bx++)
+                {
+                    vx                        = sht->vx0 + bx;
                     /* 这是访问显存信息的方式 */
                     map[vy * ctl->xsize + vx] = sid;
                 }
-
             }
         }
+        else
+        {
+            for(by = by0; by < by1; by++)
+            {
+                vy = sht->vy0 + by;
+                for(bx = bx0; bx < bx1; bx++)
+                {
+                    vx = sht->vx0 + bx;
+
+                    if(buf[by * sht->bxsize + bx] != sht->col_inv)
+                    {
+                        /* 这是访问显存信息的方式 */
+                        map[vy * ctl->xsize + vx] = sid;
+                    }
+
+                }
+            }
+        }
+
     }
 
     return;
