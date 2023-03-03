@@ -1,12 +1,4 @@
-<<<<<<< HEAD
-<<<<<<< HEAD
-text size :  16320(0x03FC0)
-=======
 text size :  15719(0x03D67)
->>>>>>> parent of 1d7c0dd (high speed)
-=======
-text size :  15719(0x03D67)
->>>>>>> parent of 1d7c0dd (high speed)
 data size :  17251(0x04363)
 bss  size :      0(0x00000)
 
@@ -91,68 +83,6 @@ bss  size :      0(0x00000)
 0x0000196B : _sheet_free
 0x0000198E : _sheet_updown
 0x00001AD4 : _sheet_refreshsub
-<<<<<<< HEAD
-<<<<<<< HEAD
-0x00001E90 : _sheet_refreshmap
-0x00001FED : _init_pit
-0x00001FED : (.text)
-0x0000205C : _timer_alloc
-0x0000208C : _timer_free
-0x0000209B : _timer_init
-0x000020AF : _timer_settime
-0x0000210A : _inthandler20
-0x0000218A : _timer_cancel
-0x000021EE : _timer_cancelall
-0x00002243 : (.text)
-0x00002243 : _task_now
-0x00002260 : _task_add
-0x00002289 : _task_remove
-0x000022EC : _task_switchsub
-0x00002313 : _task_init
-0x0000244B : _task_alloc
-0x000024FF : _task_run
-0x00002551 : _task_switch
-0x000025CF : _task_sleep
-0x0000260D : _task_idle
-0x00002617 : (.text)
-0x00002617 : _cons_putchar
-0x000026BE : _display_prompt
-0x00002707 : _console_task
-0x00002991 : _cons_newline
-0x00002A4C : _cons_runcmd
-0x00002B75 : _cmd_mem
-0x00002BC8 : _cmd_clear
-0x00002C22 : _cmd_ly
-0x00002C63 : _cmd_ls
-0x00002CF9 : _cmd_type
-0x00002D89 : _cmd_app
-0x00002FBB : _cons_putstr0
-0x00002FE9 : _hrb_api_linewin
-0x000030B6 : _cons_putstr1
-0x000030E9 : _hrb_api
-0x000034D8 : _inthandler0d
-0x00003521 : _inthandler0c
-0x0000356A : (.text)
-0x0000356A : _make_wtitle8
-0x0000361B : _make_window8
-0x00003725 : _putfonts8_asc_sht
-0x000037AC : _make_textbox8
-0x000038E2 : _change_wtitle8
-0x0000399D : _file_readfat
-0x0000399D : (.text)
-0x000039EF : _file_loadfile
-0x00003A55 : _file_search
-0x00003AFE : (.text)
-0x00003AFE : _HariStartup
-0x00003B07 : _sprintf
-0x00003B07 : (.text)
-0x00003B1B : (.text)
-0x00003B57 : _strtoul0
-0x00003C2A : (.text)
-0x00003C52 : _vsprintf
-=======
-=======
->>>>>>> parent of 1d7c0dd (high speed)
 0x00001C37 : _sheet_refreshmap
 0x00001D94 : _init_pit
 0x00001D94 : (.text)
@@ -210,10 +140,6 @@ bss  size :      0(0x00000)
 0x000038FE : _strtoul0
 0x000039D1 : (.text)
 0x000039F9 : _vsprintf
-<<<<<<< HEAD
->>>>>>> parent of 1d7c0dd (high speed)
-=======
->>>>>>> parent of 1d7c0dd (high speed)
 0x00000000 : (.data)
 0x00000000 : (.data)
 0x00000000 : (.data)
