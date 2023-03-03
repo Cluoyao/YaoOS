@@ -64,50 +64,136 @@ void sheet_setbuf(SHEET *sht, unsigned char *buf, int xsize, int ysize, int col_
     return ;
 }
 
-void sheet_refresh(SHEET *sht, int bx0, int by0, int bx1, int by1)
+
+/* vx0,vy0:移动前的位置；vx1,vy1:移动后的位置 */
+void sheet_refreshmap(SHTCTL *ctl, int vx0, int vy0, int vx1, int vy1, int h0)
 {
-    SHTCTL *ctl = (SHTCTL *)sht->ctl;
-    if(sht->height >= 0)
-    {
-        sheet_refreshsub(ctl, sht->vx0 + bx0, sht->vy0 + by0, sht->vx0 + bx1, sht->vy0 + by1, sht->height, sht->height);
-    }
-    return ;
+	int h, bx, by, vx, vy, bx0, by0, bx1, by1, sid4, *p;;
+	unsigned char *buf, sid, *map = ctl->map;
+	SHEET *sht;
+	if (vx0 < 0) { vx0 = 0; }
+	if (vy0 < 0) { vy0 = 0; }
+	if (vx1 > ctl->xsize) { vx1 = ctl->xsize; }
+	if (vy1 > ctl->ysize) { vy1 = ctl->ysize; }
+	for (h = h0; h <= ctl->top; h++) 
+	{
+		sht = ctl->sheets[h];
+		sid = sht -  ctl->sheets0; /* 将进行了减法计算的地址作为图层号码使用 */
+		buf = sht->buf;
+		bx0 = vx0 - sht->vx0;
+		by0 = vy0 - sht->vy0;
+		bx1 = vx1 - sht->vx0;
+		by1 = vy1 - sht->vy0;
+		if (bx0 < 0) { bx0 = 0; }
+		if (by0 < 0) { by0 = 0; }
+		if (bx1 > sht->bxsize) { bx1 = sht->bxsize; }
+		if (by1 > sht->bysize) { by1 = sht->bysize; }
+		if (sht->col_inv == -1) 
+		{
+			if ((sht->vx0 & 3) == 0 && (bx0 & 3) == 0 && (bx1 & 3) == 0) 
+			{
+				/*无透明色图层专用的高速版（4字节型）*/
+				bx1 = (bx1 - bx0) / 4; /* MOV次数*/
+				sid4 = sid | sid << 8 | sid << 16 | sid << 24;
+				for (by = by0; by < by1; by++) 
+				{
+					vy = sht->vy0 + by;
+					vx = sht->vx0 + bx0;
+					p = (int *) &map[vy * ctl->xsize + vx];
+					for (bx = 0; bx < bx1; bx++) 
+					{
+						p[bx] = sid4;
+					}
+				}
+			} 
+			else 
+			{
+				/*无透明色图层专用的高速版（1字节型）*/
+				for (by = by0; by < by1; by++) 
+				{
+					vy = sht->vy0 + by;
+					for (bx = bx0; bx < bx1; bx++) 
+					{
+						vx = sht->vx0 + bx;
+						map[vy * ctl->xsize + vx] = sid;
+					}
+				}
+			}
+		} else {
+			/*有透明色图层用的普通版*/
+			for (by = by0; by < by1; by++) 
+			{
+				vy = sht->vy0 + by;
+				for (bx = bx0; bx < bx1; bx++) 
+				{
+					vx = sht->vx0 + bx;
+					if (buf[by * sht->bxsize + bx] != sht->col_inv)
+					 {
+						map[vy * ctl->xsize + vx] = sid;
+					}
+				}
+			}
+		}
+	}
+	return;
 }
 
-void sheet_slide(SHEET *sht, int vx0, int vy0)
+/* vx0,vy0:移动前的位置；vx1,vy1:移动后的位置 */
+void sheet_refreshsub(SHTCTL *ctl, int vx0, int vy0, int vx1, int vy1, int h0, int h1)
 {
-    SHTCTL *ctl     = (SHTCTL *)sht->ctl;
-    int     old_vx0 = sht->vx0;
-    int     old_vy0 = sht->vy0;
+    int            h, bx, by, vx, vy, bx0, by0, bx1, by1;
+    unsigned char *buf, c, *vram = ctl->vram, *map = ctl->map, sid;
+    SHEET         *sht;
 
-    sht->vx0 = vx0;
-    sht->vy0 = vy0;
+    if(vx0 < 0){vx0 = 0;}
+    if(vy0 < 0){vy0 = 0;}
+    if(vx1 > ctl->xsize){vx1 = ctl->xsize;}
+    if(vy1 > ctl->ysize){vy1 = ctl->ysize;}
 
-    if(sht->height >= 0)
+    for(h=h0; h <= h1; h++)
     {
-        /* 如果正在显示 */
-        /* 按新图层的信息刷新画面 */
-        sheet_refreshmap(ctl, old_vx0, old_vy0, old_vx0 + sht->bxsize, old_vy0 + sht->bysize, 0);
-        sheet_refreshmap(ctl, vx0, vy0, vx0 + sht->bxsize, vy0 + sht->bysize, sht->height);
-        sheet_refreshsub(ctl, old_vx0, old_vy0, old_vx0 + sht->bxsize, old_vy0 + sht->bysize, 0, sht->height - 1); /* 两对x,y描述矩形图层 */
-        sheet_refreshsub(ctl, vx0, vy0, vx0 + sht->bxsize, vy0 + sht->bysize, sht->height, sht->height);
-        //sheet_refresh(ctl);
+        sht = ctl->sheets[h];
+        buf = sht->buf;
+
+        sid = sht - ctl->sheets0;
+
+        /* 使用vx0~vy1,对bx0~by1进行倒推 */
+        bx0 = vx0 - sht->vx0;
+        by0 = vy0 - sht->vy0;
+        bx1 = vx1 - sht->vx0;
+        by1 = vy1 - sht->vy0;
+        if(bx0 < 0){bx0 = 0;}
+        if(by0 < 0){by0 = 0;}
+        if(bx1 > sht->bxsize){bx1 = sht->bxsize;}
+        if(by1 > sht->bysize){by1 = sht->bysize;}
+
+        for(by = by0; by < by1; by++)
+        {
+            vy = sht->vy0 + by;
+            for(bx = bx0; bx < bx1; bx++)
+            {
+                vx = sht->vx0 + bx;
+
+                /* 如果属于当前图层（sid），我才进行绘制 */
+                if(map[vy * ctl->xsize + vx] == sid)
+                {
+                    /* 这是访问显存信息的方式 */
+                    vram[vy * ctl->xsize + vx] = buf[by * sht->bxsize + bx]; /* buf存放的是背景的颜色信息 */
+                }
+
+            }
+        }
     }
+
     return;
 }
 
-void sheet_free(SHEET *sht)
-{
 
-    if(sht->height >= 0)
-    {
-        /* 如果处于显示状态，则先设定为隐藏 */
-        sheet_updown(sht, -1);
-    }
-    /* 标记 未使用 标志*/
-    sht->flags = 0;
-    return;
-}
+
+
+
+
+
 
 /* 设定底板高度 */
 void sheet_updown(SHEET *sht, int height)
@@ -203,103 +289,45 @@ void sheet_updown(SHEET *sht, int height)
     }
     return ;
 }
-
-/* vx0,vy0:移动前的位置；vx1,vy1:移动后的位置 */
-void sheet_refreshsub(SHTCTL *ctl, int vx0, int vy0, int vx1, int vy1, int h0, int h1)
+void sheet_refresh(SHEET *sht, int bx0, int by0, int bx1, int by1)
 {
-    int            h, bx, by, vx, vy, bx0, by0, bx1, by1;
-    unsigned char *buf, c, *vram = ctl->vram, *map = ctl->map, sid;
-    SHEET         *sht;
-
-    if(vx0 < 0){vx0 = 0;}
-    if(vy0 < 0){vy0 = 0;}
-    if(vx1 > ctl->xsize){vx1 = ctl->xsize;}
-    if(vy1 > ctl->ysize){vy1 = ctl->ysize;}
-
-    for(h=h0; h <= h1; h++)
+    SHTCTL *ctl = (SHTCTL *)sht->ctl;
+    if(sht->height >= 0)
     {
-        sht = ctl->sheets[h];
-        buf = sht->buf;
-
-        sid = sht - ctl->sheets0;
-
-        /* 使用vx0~vy1,对bx0~by1进行倒推 */
-        bx0 = vx0 - sht->vx0;
-        by0 = vy0 - sht->vy0;
-        bx1 = vx1 - sht->vx0;
-        by1 = vy1 - sht->vy0;
-        if(bx0 < 0){bx0 = 0;}
-        if(by0 < 0){by0 = 0;}
-        if(bx1 > sht->bxsize){bx1 = sht->bxsize;}
-        if(by1 > sht->bysize){by1 = sht->bysize;}
-
-        for(by = by0; by < by1; by++)
-        {
-            vy = sht->vy0 + by;
-            for(bx = bx0; bx < bx1; bx++)
-            {
-                vx = sht->vx0 + bx;
-
-                /* 如果属于当前图层（sid），我才进行绘制 */
-                if(map[vy * ctl->xsize + vx] == sid)
-                {
-                    /* 这是访问显存信息的方式 */
-                    vram[vy * ctl->xsize + vx] = buf[by * sht->bxsize + bx]; /* buf存放的是背景的颜色信息 */
-                }
-
-            }
-        }
+        sheet_refreshsub(ctl, sht->vx0 + bx0, sht->vy0 + by0, sht->vx0 + bx1, sht->vy0 + by1, sht->height, sht->height);
     }
+    return ;
+}
+void sheet_slide(SHEET *sht, int vx0, int vy0)
+{
+    SHTCTL *ctl     = (SHTCTL *)sht->ctl;
+    int     old_vx0 = sht->vx0;
+    int     old_vy0 = sht->vy0;
 
+    sht->vx0 = vx0;
+    sht->vy0 = vy0;
+
+    if(sht->height >= 0)
+    {
+        /* 如果正在显示 */
+        /* 按新图层的信息刷新画面 */
+        sheet_refreshmap(ctl, old_vx0, old_vy0, old_vx0 + sht->bxsize, old_vy0 + sht->bysize, 0);
+        sheet_refreshmap(ctl, vx0, vy0, vx0 + sht->bxsize, vy0 + sht->bysize, sht->height);
+        sheet_refreshsub(ctl, old_vx0, old_vy0, old_vx0 + sht->bxsize, old_vy0 + sht->bysize, 0, sht->height - 1); /* 两对x,y描述矩形图层 */
+        sheet_refreshsub(ctl, vx0, vy0, vx0 + sht->bxsize, vy0 + sht->bysize, sht->height, sht->height);
+        //sheet_refresh(ctl);
+    }
     return;
 }
-
-/* vx0,vy0:移动前的位置；vx1,vy1:移动后的位置 */
-void sheet_refreshmap(SHTCTL *ctl, int vx0, int vy0, int vx1, int vy1, int h0)
+void sheet_free(SHEET *sht)
 {
-    int            h, bx, by, vx, vy, bx0, by0, bx1, by1;
-    unsigned char *buf, sid, *map = ctl->map;
-    SHEET         *sht;
 
-    if(vx0 < 0){vx0 = 0;}
-    if(vy0 < 0){vy0 = 0;}
-    if(vx1 > ctl->xsize){vx1 = ctl->xsize;}
-    if(vy1 > ctl->ysize){vy1 = ctl->ysize;}
-
-    /* 对每个图层进行map标识，一个ctl享有一个map，但每个图层在绘制的时候，可能会覆盖掉之前图层的标志*/
-    /* 所以这里从下往上绘制，上面的覆盖下面的，逻辑是合理的！！！*/
-    for(h=h0; h<=ctl->top; h++)
+    if(sht->height >= 0)
     {
-        sht = ctl->sheets[h];
-        sid = sht - ctl->sheets0;   /* 仅是作为图层的标识，没有特殊含义，就像加密编码一样 */
-        buf = sht->buf;
-
-        /* 使用vx0~vy1,对bx0~by1进行倒推 */
-        bx0 = vx0 - sht->vx0;
-        by0 = vy0 - sht->vy0;
-        bx1 = vx1 - sht->vx0;
-        by1 = vy1 - sht->vy0;
-        if(bx0 < 0){bx0 = 0;}
-        if(by0 < 0){by0 = 0;}
-        if(bx1 > sht->bxsize){bx1 = sht->bxsize;}
-        if(by1 > sht->bysize){by1 = sht->bysize;}
-
-        for(by = by0; by < by1; by++)
-        {
-            vy = sht->vy0 + by;
-            for(bx = bx0; bx < bx1; bx++)
-            {
-                vx = sht->vx0 + bx;
-
-                if(buf[by * sht->bxsize + bx] != sht->col_inv)
-                {
-                    /* 这是访问显存信息的方式 */
-                    map[vy * ctl->xsize + vx] = sid;
-                }
-
-            }
-        }
+        /* 如果处于显示状态，则先设定为隐藏 */
+        sheet_updown(sht, -1);
     }
-
+    /* 标记 未使用 标志*/
+    sht->flags = 0;
     return;
 }
