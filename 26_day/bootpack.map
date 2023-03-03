@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 text size :  16320(0x03FC0)
+=======
+text size :  15719(0x03D67)
+>>>>>>> parent of 1d7c0dd (high speed)
 data size :  17251(0x04363)
 bss  size :      0(0x00000)
 
@@ -83,6 +87,7 @@ bss  size :      0(0x00000)
 0x0000196B : _sheet_free
 0x0000198E : _sheet_updown
 0x00001AD4 : _sheet_refreshsub
+<<<<<<< HEAD
 0x00001E90 : _sheet_refreshmap
 0x00001FED : _init_pit
 0x00001FED : (.text)
@@ -140,6 +145,65 @@ bss  size :      0(0x00000)
 0x00003B57 : _strtoul0
 0x00003C2A : (.text)
 0x00003C52 : _vsprintf
+=======
+0x00001C37 : _sheet_refreshmap
+0x00001D94 : _init_pit
+0x00001D94 : (.text)
+0x00001E03 : _timer_alloc
+0x00001E33 : _timer_free
+0x00001E42 : _timer_init
+0x00001E56 : _timer_settime
+0x00001EB1 : _inthandler20
+0x00001F31 : _timer_cancel
+0x00001F95 : _timer_cancelall
+0x00001FEA : (.text)
+0x00001FEA : _task_now
+0x00002007 : _task_add
+0x00002030 : _task_remove
+0x00002093 : _task_switchsub
+0x000020BA : _task_init
+0x000021F2 : _task_alloc
+0x000022A6 : _task_run
+0x000022F8 : _task_switch
+0x00002376 : _task_sleep
+0x000023B4 : _task_idle
+0x000023BE : (.text)
+0x000023BE : _cons_putchar
+0x00002465 : _display_prompt
+0x000024AE : _console_task
+0x00002738 : _cons_newline
+0x000027F3 : _cons_runcmd
+0x0000291C : _cmd_mem
+0x0000296F : _cmd_clear
+0x000029C9 : _cmd_ly
+0x00002A0A : _cmd_ls
+0x00002AA0 : _cmd_type
+0x00002B30 : _cmd_app
+0x00002D62 : _cons_putstr0
+0x00002D90 : _hrb_api_linewin
+0x00002E5D : _cons_putstr1
+0x00002E90 : _hrb_api
+0x0000327F : _inthandler0d
+0x000032C8 : _inthandler0c
+0x00003311 : (.text)
+0x00003311 : _make_wtitle8
+0x000033C2 : _make_window8
+0x000034CC : _putfonts8_asc_sht
+0x00003553 : _make_textbox8
+0x00003689 : _change_wtitle8
+0x00003744 : _file_readfat
+0x00003744 : (.text)
+0x00003796 : _file_loadfile
+0x000037FC : _file_search
+0x000038A5 : (.text)
+0x000038A5 : _HariStartup
+0x000038AE : _sprintf
+0x000038AE : (.text)
+0x000038C2 : (.text)
+0x000038FE : _strtoul0
+0x000039D1 : (.text)
+0x000039F9 : _vsprintf
+>>>>>>> parent of 1d7c0dd (high speed)
 0x00000000 : (.data)
 0x00000000 : (.data)
 0x00000000 : (.data)
