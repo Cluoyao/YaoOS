@@ -2,3 +2,5 @@
 *.obj
 *.lst
 26_day/bootpack.map
+26_day/bootpack.map
+*.map
