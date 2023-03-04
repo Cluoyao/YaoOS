@@ -15,7 +15,7 @@ void HariMain(void)
 	int                        fifobuf[128], keycmd_buf[32], *cons_fifo[2];
    
 	TIMER                     *timer;
-	int                        mx, my, i;
+	int                        mx, my, i, new_mx = -1, new_my = 0, new_wx = 0x7fffffff, new_wy = 0;
 	struct MOUSE_DEC           mdec; 
    
 	unsigned int               memtotal, count = 0;
@@ -27,7 +27,7 @@ void HariMain(void)
 	int                        key_to = 0, key_shift = 0, key_leds = (binfo->leds >> 4) & 7, keycmd_wait = -1;
 	int                        key_capslk = 0;
 	CONSOLE                   *cons;
-	int                        j, x, y, mmx = -1, mmy = -1;
+	int                        j, x, y, mmx = -1, mmy = -1, mmx2 = 0;
 	SHEET					  *sht = 0, *key_win;
 	
 
@@ -141,8 +141,24 @@ void HariMain(void)
 		io_cli(); /* 关闭中断 */
 		if (fifo32_status(&fifo) == 0) 
 		{
-			task_sleep(task_a); /* 注意调用顺序 */
-			io_sti();
+			/*fifo为空，当存在搁置的绘图操作时立即执行*/
+			if(new_mx >= 0)
+			{
+				io_sti();
+				sheet_slide(sht_mouse, new_mx, new_my);
+				new_mx = -1;
+			}
+			else if(new_wx != 0x7fffffff)
+			{
+				io_sti();
+				sheet_slide(sht, new_wx, new_wy);
+				new_wx = 0x7fffffff;
+			}
+			else
+			{
+				task_sleep(task_a); /* 注意调用顺序 */
+				io_sti();
+			}
 		} 
 		else 
 		{
@@ -285,7 +301,8 @@ void HariMain(void)
 					}
 
 					sheet_slide(sht_mouse, mx, my);/* 包含sheet_refresh含sheet_refresh */
-
+					new_mx = mx;
+					new_my = my;
 					if((mdec.btn & 0x01) != 0)
 					{
 						if(mmx < 0)
@@ -312,8 +329,10 @@ void HariMain(void)
 										if(3 <= x && x < sht->bxsize - 3 && 3 <= y && y < 21)
 										{
 											/* 鼠标按着标题栏区域 */
-											mmx = mx;
-											mmy = my;
+											mmx    = mx;
+											mmy    = my;
+											mmx2   = sht->vx0;
+											new_wy = sht->vy0;
 										}
 										if(sht->bxsize - 21 <= x && x < sht->bxsize - 5 && 5 <= y && y < 19)
 										{
@@ -339,14 +358,19 @@ void HariMain(void)
 							/* 如果处于窗口移动模式 */
 							x   = mx - mmx; /* 计算鼠标的移动距离 */
 							y   = my - mmy;
-							sheet_slide(sht, sht->vx0 + x, sht->vy0 + y);
-							mmx = mx; /* 更新为移动后的坐标 */
-							mmy = my;
+							new_wx = (mmx2 + x + 2) & ~3;
+							new_wy = new_wy + y;
+							mmy    = my;
 						}
 					}
 					else
 					{
 						mmx = -1;
+						if(new_wx != 0x7fffffff)
+						{
+							sheet_slide(sht, new_wx, new_wy);
+							new_wx = 0x7fffffff;
+						}
 					}
 				}
 			}
