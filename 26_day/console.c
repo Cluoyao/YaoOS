@@ -15,7 +15,10 @@ void cons_putchar(CONSOLE *cons, int chr, char move)
 	{
 		for(;;)
 		{
-			putfonts8_asc_sht(cons->sht, cons->cur_x, cons->cur_y, COL8_FFFFFF, COL8_000000, ' ', 1);
+			if(cons->sht != 0)
+			{
+				putfonts8_asc_sht(cons->sht, cons->cur_x, cons->cur_y, COL8_FFFFFF, COL8_000000, ' ', 1);
+			}
 			cons->cur_x += 8;
 			if(cons->cur_x == 8 + 240)
 			{
@@ -38,7 +41,11 @@ void cons_putchar(CONSOLE *cons, int chr, char move)
 	}
 	else
 	{
-		putfonts8_asc_sht(cons->sht, cons->cur_x, cons->cur_y, COL8_FFFFFF, COL8_000000, s, 1);
+		if(cons->sht != 0)
+		{
+			putfonts8_asc_sht(cons->sht, cons->cur_x, cons->cur_y, COL8_FFFFFF, COL8_000000, s, 1);
+		}
+		
 		if(move != 0)
 		{
 			/* move为0时光标不后移 */
@@ -84,9 +91,12 @@ void console_task(SHEET *sheet, unsigned int memtotal)
 	cons.cur_c                        = -1;
 	task->cons                        = (int)&cons;
 
-	cons.timer = timer_alloc();
-	timer_init(cons.timer, &task->fifo, 1);
-	timer_settime(cons.timer, 50);
+	if(sheet != 0)
+	{
+		cons.timer = timer_alloc();
+		timer_init(cons.timer, &task->fifo, 1);
+		timer_settime(cons.timer, 50);
+	}
 	file_readfat(fat, (unsigned char*)(ADR_DISKIMG + 0x000200));
 
 	/* 显示提示符 */
@@ -163,6 +173,10 @@ void console_task(SHEET *sheet, unsigned int memtotal)
 					cons_newline(&cons);
 					/* 执行命令 */
 					cons_runcmd(cmdline, &cons, fat, memtotal);
+					if(sheet == 0)
+					{
+						cmd_exit(&cons, fat);
+					}
 					/* 执行完之后显示提示符 */
 					display_prompt(&cons, prompt, 1);
 				}
@@ -177,11 +191,14 @@ void console_task(SHEET *sheet, unsigned int memtotal)
 				}
 			}
 			/* 重新显示光标 */	
-			if(cons.cur_c >= 0)
+			if(sheet != 0)
 			{
-				boxfill8(sheet->buf, sheet->bxsize, cons.cur_c, cons.cur_x, cons.cur_y, cons.cur_x + 7, cons.cur_y + 15);
-			}			
-			sheet_refresh(sheet, cons.cur_x, cons.cur_y, cons.cur_x + 8, cons.cur_y + 16);
+				if(cons.cur_c >= 0)
+				{
+					boxfill8(sheet->buf, sheet->bxsize, cons.cur_c, cons.cur_x, cons.cur_y, cons.cur_x + 7, cons.cur_y + 15);
+				}			
+				sheet_refresh(sheet, cons.cur_x, cons.cur_y, cons.cur_x + 8, cons.cur_y + 16);
+			}
 		}
 	}
 }
@@ -197,22 +214,25 @@ void  cons_newline(CONSOLE *cons)
 	}
 	else
 	{
-		/* 滚动 */
-		for(y = 28; y < 28 + 112; y++)
+		if(sheet != 0)
 		{
-			for(x = 8; x < 8 + 240; x++)
+			/* 滚动 */
+			for(y = 28; y < 28 + 112; y++)
 			{
-				sheet->buf[x + y * sheet->bxsize] = sheet->buf[x + (y + 16) * sheet->bxsize];
+				for(x = 8; x < 8 + 240; x++)
+				{
+					sheet->buf[x + y * sheet->bxsize] = sheet->buf[x + (y + 16) * sheet->bxsize];
+				}
 			}
-		}
-		for(y = 28 + 112; y < 28 + 128; y++)
-		{
-			for(x = 8; x < 8 + 240; x++)
+			for(y = 28 + 112; y < 28 + 128; y++)
 			{
-				sheet->buf[x + y * sheet->bxsize] = COL8_000000;
+				for(x = 8; x < 8 + 240; x++)
+				{
+					sheet->buf[x + y * sheet->bxsize] = COL8_000000;
+				}
 			}
+			sheet_refresh(sheet, 8, 28, 8 + 240, 28 + 128);
 		}
-		sheet_refresh(sheet, 8, 28, 8 + 240, 28 + 128);
 	}
 	cons->cur_x = 8;
 	return;
@@ -220,29 +240,37 @@ void  cons_newline(CONSOLE *cons)
 
 void cons_runcmd(char *cmdline, CONSOLE *cons, int *fat, unsigned int memtotal)
 {
-	if(strcmp(cmdline, "mem") == 0)
+	if(strcmp(cmdline, "mem") == 0 && cons->sht != 0)
 	{
 		cmd_mem(cons, memtotal);
 	}
-	else if(strcmp(cmdline, "clear") == 0)
+	else if(strcmp(cmdline, "clear") == 0 && cons->sht != 0)
 	{
 		cmd_clear(cons);
 	}
-	else if(strcmp(cmdline, "luoyao") == 0)
+	else if(strcmp(cmdline, "luoyao") == 0 && cons->sht != 0)
 	{
 		cmd_ly(cons);
 	}
-	else if(strcmp(cmdline, "ls") == 0)
+	else if(strcmp(cmdline, "ls") == 0 && cons->sht != 0)
 	{	
 		cmd_ls(cons);
 	}
-	else if(strncmp(cmdline, "type ", 5) == 0)
+	else if(strncmp(cmdline, "type ", 5) == 0 && cons->sht != 0)
 	{
 		cmd_type(cons, fat, cmdline);
 	}
 	else if(strcmp(cmdline, "exit") == 0)
 	{
 		cmd_exit(cons, fat);
+	}
+	else if(strncmp(cmdline, "start ", 6) == 0)
+	{
+		cmd_start(cons, cmdline, memtotal);
+	}
+	else if(strncmp(cmdline, "ncst ", 5) == 0)
+	{
+		cmd_ncst(cons, cmdline, memtotal);
 	}
 	else if(cmdline[0] != 0)
 	{
@@ -251,8 +279,8 @@ void cons_runcmd(char *cmdline, CONSOLE *cons, int *fat, unsigned int memtotal)
 			/* 不是命令，不是应用程序，也不是空行 */
 			cons_putstr0(cons, "Bad command.\n\n");
 			//putfonts8_asc_sht(cons->sht, CURSOR_INIT_POS, cons->cur_y, COL8_FFFFFF, COL8_000000, "Bad command", 12);
-			cons_newline(cons);
-			cons_newline(cons);
+			//cons_newline(cons);
+			//cons_newline(cons);
 		}
 
 	}
@@ -716,26 +744,11 @@ SHEET *open_console(SHTCTL *shtctl, unsigned int memtotal)
 	MEMMAN *memman     = (MEMMAN *)MEMMAN_ADDR;
 	SHEET  *sht        = sheet_alloc(shtctl);
 	unsigned char *buf = (unsigned char *)memman_alloc_4k(memman, 256 * 165);
-	TASK *task         = task_alloc();
-	int  *cons_fifo    = (int *)memman_alloc_4k(memman, 128 * 4);
 	sheet_setbuf(sht, buf, 256, 165, -1); /* 无透明颜色 */
 	make_window8(buf, 256, 165, "Console", 0);
 	make_textbox8(sht, 8, 28, 240, 128, COL8_000000);
-	task->cons_stack = memman_alloc_4k(memman, 64 * 1024);
-	task->tss.esp = task->cons_stack + 64 * 1024 - 12;
-	task->tss.eip = (int)&console_task;
-	task->tss.es  = 1 * 8;
-	task->tss.cs  = 2 * 8;
-	task->tss.ss  = 1 * 8;
-	task->tss.ds  = 1 * 8;
-	task->tss.fs  = 1 * 8;
-	task->tss.gs  = 1 * 8;
-	*((int *) (task->tss.esp + 4)) = (int)sht;
-	*((int *) (task->tss.esp + 8)) = (int)memtotal;
-	task_run(task, 2, 2); /* level=2, priority=2 */ 
-	sht->task   = task;
+	sht->task   = open_constask(sht, memtotal);
 	sht->flags |= 0x20;        /* 有光标 */
-	fifo32_init(&task->fifo, 128, cons_fifo, task);
 	return sht;
 }
 
@@ -764,13 +777,80 @@ void   cmd_exit(CONSOLE *cons, int *fat)
 	TASK   *task   = task_now();
 	SHTCTL *shtctl = (SHTCTL *)*((int *)0x0fe4);
 	FIFO32 *fifo   = (FIFO32 *)*((int *)0x0fec);
-	timer_cancel(cons->timer);
+	if(cons->sht != 0)
+	{
+		timer_cancel(cons->timer);
+	}
+	
 	memman_free_4k(memman, (int)fat, 4 * 2880);
 	io_cli();
-	fifo32_put(fifo, cons->sht - shtctl->sheets0 + 768);
+	if(cons->sht != 0)
+	{
+		fifo32_put(fifo, cons->sht - shtctl->sheets0 + 768); /* 768~1023*/
+	}
+	else
+	{
+		fifo32_put(fifo, task - taskctl->tasks0 + 1024); /*1024~2023*/
+	}
+	
 	io_sti();
 	for(;;)
 	{
 		task_sleep(task);
 	}
 }
+
+void   cmd_start(CONSOLE *cons, char *cmdline, int memtotal)
+{
+	SHTCTL *shtctl = (SHTCTL *)*((int *)0x0fe4);
+	SHEET  *sht    = open_console(shtctl, memtotal);
+	FIFO32 *fifo   = &sht->task->fifo;
+	int     i;
+	sheet_slide(sht, 32, 4);
+	sheet_updown(sht, shtctl->top);
+	/*将命令行输入的字符串逐字复制粘贴到新的命令行窗口中*/
+	for(i = 6; cmdline[i] != 0; i++)
+	{
+		fifo32_put(fifo, cmdline[i] + 256);
+	}
+	fifo32_put(fifo, 10 + 256);
+	cons_newline(cons);
+	return;
+}
+
+void   cmd_ncst(CONSOLE *cons, char *cmdline, int memtotal)
+{
+	TASK   *task = open_console(0, memtotal);
+	FIFO32 *fifo = &task->fifo;
+	int     i;
+	/*将命令行输入的字符串复制到新的命令行窗口*/
+	for(i = 5; cmdline[i] != 0; i++)
+	{
+		fifo32_put(fifo, cmdline[i] + 256);
+	}
+	fifo32_put(fifo, 10 + 256);
+	cons_newline(cons);
+	return;
+}
+
+TASK *open_constask(SHEET *sht, unsigned int memtotal)
+{
+	MEMMAN *memman = (MEMMAN *) MEMMAN_ADDR;
+	TASK *task = task_alloc();
+	int *cons_fifo = (int *) memman_alloc_4k(memman, 128 * 4);
+	task->cons_stack = memman_alloc_4k(memman, 64 * 1024);
+	task->tss.esp = task->cons_stack + 64 * 1024 - 12;
+	task->tss.eip = (int) &console_task;
+	task->tss.es = 1 * 8;
+	task->tss.cs = 2 * 8;
+	task->tss.ss = 1 * 8;
+	task->tss.ds = 1 * 8;
+	task->tss.fs = 1 * 8;
+	task->tss.gs = 1 * 8;
+	*((int *) (task->tss.esp + 4)) = (int) sht;
+	*((int *) (task->tss.esp + 8)) = memtotal;
+	task_run(task, 2, 2); /* level=2, priority=2 */
+	fifo32_init(&task->fifo, 128, cons_fifo, task);
+	return task;
+}
+

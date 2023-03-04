@@ -181,6 +181,7 @@ typedef struct _TASK_
 	int               ds_base, cons_stack;
 }TASK;
 
+
 typedef struct _SHEET_
 {
     unsigned char *buf;
@@ -282,6 +283,8 @@ typedef struct _TASKCTL_
 	TASK       tasks0[MAX_TASKS];
 }TASKCTL;
 
+extern TASKCTL *taskctl;
+
 typedef struct _FILEINFO_
 {
 	unsigned char  name[8], ext[3], type;
@@ -344,6 +347,9 @@ SHEET *open_console(SHTCTL *shtctl, unsigned int memtotal);
 void   close_constask(TASK *task);
 void   close_console(SHEET *sht);
 void   cmd_exit(CONSOLE *cons, int *fat);
+void   cmd_start(CONSOLE *cons, char *cmdline, int memtotal);
+void   cmd_ncst(CONSOLE *cons, char *cmdline, int memtotal);
+TASK  *open_constask(SHEET *sht, unsigned int memtotal);
 
 
 void keywin_off(SHEET *key_win);

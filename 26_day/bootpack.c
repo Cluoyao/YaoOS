@@ -57,6 +57,7 @@ void HariMain(void)
 	io_sti(); /* IDT/PIC的初始化已经完成，于是开放CPU的中断 */
 
 	fifo32_init(&fifo, 128, fifobuf, 0);
+	*((int *)0x0fec) = (int)&fifo;
 	init_pit();
 	init_keyboard(&fifo, 256);
 	enable_mouse(&fifo, 512, &mdec);
@@ -102,7 +103,7 @@ void HariMain(void)
 	sheet_updown(sht_mouse,     2);
 	keywin_on(key_win);
 
-	*((int *)0x0fec) = (int)&fifo;
+
 
 	for (;;) 
 	{
@@ -378,6 +379,10 @@ void HariMain(void)
 			{
 				close_console(shtctl->sheets0 + (i - 768));
 			}
+			else if(1024 <= i && i <= 2023)
+			{
+				close_constask(taskctl->tasks0 + (i - 1024));
+			}
 		}
 	}
 }
@@ -404,4 +409,6 @@ void keywin_on(SHEET *key_win)
 
 	return ;
 }
+
+
 
