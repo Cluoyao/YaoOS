@@ -21,7 +21,7 @@ void HariMain(void)
 	unsigned int               memtotal, count = 0;
 	MEMMAN                    *memman = (MEMMAN *) MEMMAN_ADDR;
 	SHTCTL                    *shtctl;
-	SHEET                     *sht_back, *sht_mouse, *sht_win,  *sht_cons[2];
+	SHEET                     *sht_back, *sht_mouse;
 	unsigned char             *buf_back, buf_mouse[256], *buf_cons[2];
 	TASK                      *task_a, *task_cons[2], *task;
 	int                        key_to = 0, key_shift = 0, key_leds = (binfo->leds >> 4) & 7, keycmd_wait = -1;
@@ -81,30 +81,7 @@ void HariMain(void)
 	sheet_setbuf(sht_back,  buf_back,  binfo->scrnx, binfo->scrny, -1); /* 没有透明色 */
 	init_screen8(buf_back, binfo->scrnx, binfo->scrny);
 
-	for(i = 0; i < 2; i++)
-	{
-		sht_cons[i]  = sheet_alloc(shtctl);
-		buf_cons[i]  = (unsigned char *)memman_alloc_4k(memman, 256 * 165);
-		sheet_setbuf(sht_cons[i], buf_cons[i], 256, 165, -1); /* 无透明颜色 */
-		make_window8(buf_cons[i], 256, 165, "Console", 0);
-		make_textbox8(sht_cons[i], 8, 28, 240, 128, COL8_000000);
-		task_cons[i]          = task_alloc();
-		task_cons[i]->tss.esp = memman_alloc_4k(memman, 64 * 1024) + 64 * 1024 - 12;
-		task_cons[i]->tss.eip = (int)&console_task;
-		task_cons[i]->tss.es  = 1 * 8;
-		task_cons[i]->tss.cs  = 2 * 8;
-		task_cons[i]->tss.ss  = 1 * 8;
-		task_cons[i]->tss.ds  = 1 * 8;
-		task_cons[i]->tss.fs  = 1 * 8;
-		task_cons[i]->tss.gs  = 1 * 8;
-		*((int *) (task_cons[i]->tss.esp + 4)) = (int)sht_cons[i];
-		*((int *) (task_cons[i]->tss.esp + 8)) = (int)memtotal;
-		task_run(task_cons[i], 2, 2); /* level=2, priority=2 */ 
-		sht_cons[i]->task   = task_cons[i];
-	    sht_cons[i]->flags |= 0x20;        /* 有光标 */
-		cons_fifo[i] = (int *)memman_alloc_4k(memman, 128 * 4);
-		fifo32_init(&task_cons[i]->fifo, 128, cons_fifo[i], task_cons[i]);
-	}
+	key_win = open_console(shtctl, memtotal);
 
 	/* sht_mouse */
 	sht_mouse = sheet_alloc(shtctl); /* 从管理单元拿出一个图层来用，作为鼠标图层 */
@@ -115,18 +92,14 @@ void HariMain(void)
 
 	/* 从左上角(0,0)点开始绘制显示界面 */
 	sheet_slide(sht_back, 0,  0);
-	sheet_slide(sht_cons[1], 56, 6);
-	sheet_slide(sht_cons[0], 8, 2);
-
+	sheet_slide(key_win, 32, 4);
 	/* 移动鼠标图层到指定位置 */
 	sheet_slide(sht_mouse, mx, my);
 
 	/* 设置显示背景（图层）高度为0 */
 	sheet_updown(sht_back,      0);
-	sheet_updown(sht_cons[1],   1);
-	sheet_updown(sht_cons[0],   2);
-	sheet_updown(sht_mouse,     3);
-	key_win          = sht_cons[0];
+	sheet_updown(key_win,       1);
+	sheet_updown(sht_mouse,     2);
 	keywin_on(key_win);
 
 	for (;;) 
@@ -173,8 +146,6 @@ void HariMain(void)
 
 			if (256 <= i && i <= 511) /* 键盘数据 */
 			{
-				// sprintf(s, "%02X", i - 256);
-				// putfonts8_asc_sht(sht_back, 0, 16, COL8_FFFFFF, COL8_008484, s, 2);
 				if (i < 256 + 0x80) 
 				{
 					if(key_shift == 0)
@@ -204,6 +175,17 @@ void HariMain(void)
 				{
 					fifo32_put(&key_win->task->fifo, s[0] + 256);
 				}
+
+				if(i == 256 + 0x3c && key_shift != 0)
+				{
+					/*自动将输入焦点切换到新打开的命令行窗口*/
+					keywin_off(key_win);
+					key_win = open_console(shtctl, memtotal);
+					sheet_slide(key_win, 32, 4);
+					sheet_updown(key_win, shtctl->top);
+					keywin_on(key_win);
+				}
+
 				if(i == 256 + 0x0f) /* Tab键 */
 				{
 					keywin_off(key_win);
@@ -222,10 +204,7 @@ void HariMain(void)
 				}
 				if(i == 256 + 0x1c) /*回车键*/
 				{
-					if(key_win != sht_win)
-					{
-						fifo32_put(&key_win->task->fifo, 10 + 256);
-					}
+					fifo32_put(&key_win->task->fifo, 10 + 256);
 				}
 
 				if(i == 256 + 0x2a) /* 左键shift on*/
