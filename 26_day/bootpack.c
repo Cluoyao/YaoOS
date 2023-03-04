@@ -102,6 +102,8 @@ void HariMain(void)
 	sheet_updown(sht_mouse,     2);
 	keywin_on(key_win);
 
+	*((int *)0x0fec) = (int)&fifo;
+
 	for (;;) 
 	{
 		if (fifo32_status(&keycmd) > 0 && keycmd_wait < 0) 
@@ -138,10 +140,18 @@ void HariMain(void)
 			i = fifo32_get(&fifo);
 			io_sti();
 
-			if(key_win->flags == 0)
+			if(key_win != 0 && key_win->flags == 0)
 			{
-				key_win  = shtctl->sheets[shtctl->top - 1];
-				keywin_on(key_win);
+				if(shtctl->top == 1)
+				{
+					key_win = 0;
+				}
+				else
+				{
+					key_win  = shtctl->sheets[shtctl->top - 1];
+					keywin_on(key_win);
+				}
+
 			}
 
 			if (256 <= i && i <= 511) /* 键盘数据 */
@@ -171,7 +181,7 @@ void HariMain(void)
 					}
 				}
 
-				if(s[0] != 0)
+				if(s[0] != 0 && key_win != 0) /*一般字符，退格键，回车键*/
 				{
 					fifo32_put(&key_win->task->fifo, s[0] + 256);
 				}
@@ -179,14 +189,18 @@ void HariMain(void)
 				if(i == 256 + 0x3c && key_shift != 0)
 				{
 					/*自动将输入焦点切换到新打开的命令行窗口*/
-					keywin_off(key_win);
+					if(key_win != 0)
+					{
+						keywin_off(key_win);
+					}
+					
 					key_win = open_console(shtctl, memtotal);
 					sheet_slide(key_win, 32, 4);
 					sheet_updown(key_win, shtctl->top);
 					keywin_on(key_win);
 				}
 
-				if(i == 256 + 0x0f) /* Tab键 */
+				if(i == 256 + 0x0f && key_win != 0) /* Tab键 */
 				{
 					keywin_off(key_win);
 					j = key_win->height - 1;
@@ -228,7 +242,7 @@ void HariMain(void)
 					key_capslk = !key_capslk;
 				}
 
-				if(i == 256 + 0x3b && key_shift != 0)
+				if(i == 256 + 0x3b && key_shift != 0 && key_win != 0)
 				{
 					/* shift + f1 */
 					task = key_win->task;
@@ -352,6 +366,10 @@ void HariMain(void)
 						}
 					}
 				}
+			}
+			else if(768 <= i && i <= 1023)
+			{
+				close_console(shtctl->sheets0 + (i - 768));
 			}
 		}
 	}

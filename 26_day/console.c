@@ -235,6 +235,10 @@ void cons_runcmd(char *cmdline, CONSOLE *cons, int *fat, unsigned int memtotal)
 	{
 		cmd_type(cons, fat, cmdline);
 	}
+	else if(strcmp(cmdline, "exit") == 0)
+	{
+		cmd_exit(cons, fat);
+	}
 	else if(cmdline[0] != 0)
 	{
 		if(cmd_app(cons, fat, cmdline) == 0)
@@ -712,7 +716,8 @@ SHEET *open_console(SHTCTL *shtctl, unsigned int memtotal)
 	sheet_setbuf(sht, buf, 256, 165, -1); /* 无透明颜色 */
 	make_window8(buf, 256, 165, "Console", 0);
 	make_textbox8(sht, 8, 28, 240, 128, COL8_000000);
-	task->tss.esp = memman_alloc_4k(memman, 64 * 1024) + 64 * 1024 - 12;
+	task->cons_stack = memman_alloc_4k(memman, 64 * 1024);
+	task->tss.esp = task->cons_stack + 64 * 1024 - 12;
 	task->tss.eip = (int)&console_task;
 	task->tss.es  = 1 * 8;
 	task->tss.cs  = 2 * 8;
@@ -727,4 +732,40 @@ SHEET *open_console(SHTCTL *shtctl, unsigned int memtotal)
 	sht->flags |= 0x20;        /* 有光标 */
 	fifo32_init(&task->fifo, 128, cons_fifo, task);
 	return sht;
+}
+
+void   close_constask(TASK *task)
+{
+	MEMMAN *memman = (MEMMAN *)MEMMAN_ADDR;
+	task_sleep(task);
+	memman_free_4k(memman, task->cons_stack, 64 * 1024);
+	memman_free_4k(memman, (int)task->fifo.buf, 128 * 4);
+	task->flags = 0; /*用来替代task_free(task)*/
+	return;
+}
+void   close_console(SHEET *sht)
+{
+	MEMMAN *memman = (MEMMAN *)MEMMAN_ADDR;
+	TASK *task = sht->task;
+	memman_free_4k(memman, (int)sht->buf, 256 * 165);
+	sheet_free(sht);
+	close_constask(task);
+	return;
+}
+
+void   cmd_exit(CONSOLE *cons, int *fat)
+{
+	MEMMAN *memman = (MEMMAN *)MEMMAN_ADDR;
+	TASK   *task   = task_now();
+	SHTCTL *shtctl = (SHTCTL *)*((int *)0x0fe4);
+	FIFO32 *fifo   = (FIFO32 *)*((int *)0x0fec);
+	timer_cancel(cons->timer);
+	memman_free_4k(memman, (int)fat, 4 * 2880);
+	io_cli();
+	fifo32_put(fifo, cons->sht - shtctl->sheets0 + 768);
+	io_sti();
+	for(;;)
+	{
+		task_sleep(task);
+	}
 }
