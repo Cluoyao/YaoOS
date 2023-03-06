@@ -95,6 +95,7 @@ void set_gatedesc(struct GATE_DESCRIPTOR *gd, int offset, int selector, int ar);
 #define ADR_BOTPAK		0x00280000
 #define LIMIT_BOTPAK	0x0007ffff
 #define AR_DATA32_RW	0x4092
+#define AR_LDT          0x0082
 #define AR_CODE32_ER	0x409a
 #define AR_TSS32		0x0089
 #define AR_INTGATE32	0x008e
@@ -173,12 +174,13 @@ typedef struct _TSS32_
 
 typedef struct _TASK_
 {
-	int               sel, flags;   /* sel用来存放GDT的编号 */
-	int               level, priority;
-	FIFO32            fifo;
-	TSS32             tss;
-	struct _CONSOLE_ *cons;
-	int               ds_base, cons_stack;
+	int                       sel, flags;   /* sel用来存放GDT的编号 */
+	int                       level, priority;
+	FIFO32                    fifo;
+	TSS32                     tss;
+	struct SEGMENT_DESCRIPTOR ldt[2];
+	struct _CONSOLE_         *cons;
+	int                       ds_base, cons_stack;
 }TASK;
 
 
