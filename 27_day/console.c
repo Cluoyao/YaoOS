@@ -92,7 +92,7 @@ void console_task(SHEET *sheet, unsigned int memtotal)
 	cons.cur_c                        = -1;
 	task->cons                        = (int)&cons;
 
-	if(sheet != 0)
+	if(cons.sht != 0)
 	{
 		cons.timer = timer_alloc();
 		timer_init(cons.timer, &task->fifo, 1);
@@ -116,7 +116,7 @@ void console_task(SHEET *sheet, unsigned int memtotal)
 		{
 			i = fifo32_get(&task->fifo);
 			io_sti();
-			if(i <= 1)  /* 光标用定时器 */
+			if(i <= 1 && cons.sht != 0)  /* 光标用定时器 */
 			{
 				if(i != 0)
 				{
@@ -144,8 +144,12 @@ void console_task(SHEET *sheet, unsigned int memtotal)
 			}
 			if(i == 3) /* 光标off */
 			{
-				/* 因为背景是黑色，所以用黑色擦除 */
-				boxfill8(sheet->buf, sheet->bxsize, COL8_000000, cons.cur_x, cons.cur_y, cons.cur_x + 7, cons.cur_y + 15); /* 擦除 */
+				if(cons.sht != 0)
+				{
+					/* 因为背景是黑色，所以用黑色擦除 */
+					boxfill8(cons.sht->buf, cons.sht->bxsize, COL8_000000, 
+							cons.cur_x, cons.cur_y, cons.cur_x + 7, cons.cur_y + 15); /* 擦除 */
+				}
 				cons.cur_c = -1;
 			}
 			if(i == 4)
@@ -174,7 +178,7 @@ void console_task(SHEET *sheet, unsigned int memtotal)
 					cons_newline(&cons);
 					/* 执行命令 */
 					cons_runcmd(cmdline, &cons, fat, memtotal);
-					if(sheet == 0)
+					if(cons.sht == 0)
 					{
 						cmd_exit(&cons, fat);
 					}
@@ -192,13 +196,14 @@ void console_task(SHEET *sheet, unsigned int memtotal)
 				}
 			}
 			/* 重新显示光标 */	
-			if(sheet != 0)
+			if(cons.sht != 0)
 			{
 				if(cons.cur_c >= 0)
 				{
-					boxfill8(sheet->buf, sheet->bxsize, cons.cur_c, cons.cur_x, cons.cur_y, cons.cur_x + 7, cons.cur_y + 15);
+					boxfill8(cons.sht->buf, cons.sht->bxsize, 
+					cons.cur_c, cons.cur_x, cons.cur_y, cons.cur_x + 7, cons.cur_y + 15);
 				}			
-				sheet_refresh(sheet, cons.cur_x, cons.cur_y, cons.cur_x + 8, cons.cur_y + 16);
+				sheet_refresh(cons.sht, cons.cur_x, cons.cur_y, cons.cur_x + 8, cons.cur_y + 16);
 			}
 		}
 	}
@@ -552,12 +557,13 @@ void cons_putstr1(CONSOLE *cons, char *s, int l)
 int *hrb_api(int edi, int esi, int ebp, int esp, int ebx, int edx, int ecx, int eax)
 {
 	
-	TASK    *task    = task_now();
-	CONSOLE *cons    = task->cons;
-	SHTCTL  *shtctl  = (SHTCTL *)*((int *)0x0fe4);
-	int      ds_base = task->ds_base; 
+	TASK    *task     = task_now();
+	CONSOLE *cons     = task->cons;
+	SHTCTL  *shtctl   = (SHTCTL *)*((int *)0x0fe4);
+	int      ds_base  = task->ds_base; 
+	FIFO32  *sys_fifo = (FIFO32 *)*((int *)0xfec);
 	SHEET   *sht;
-	int     *reg     = &eax + 1;
+	int     *reg      = &eax + 1;
 	int      i;
 
 	/* 强行改写通过PUSHAD保存的值 */
@@ -686,6 +692,14 @@ int *hrb_api(int edi, int esi, int ebp, int esp, int ebx, int edx, int ecx, int 
 			if(i == 3)
 			{
 				cons->cur_c = -1;
+			}
+			if(i == 4)
+			{
+				timer_cancel(cons->timer);
+				io_cli();
+				fifo32_put(sys_fifo, cons->sht - shtctl->sheets0 + 2024);
+				cons->sht = 0;
+				io_sti();
 			}
 			if(256 <= i) /*键盘数据通过任务a*/
 			{

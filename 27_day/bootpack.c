@@ -28,7 +28,7 @@ void HariMain(void)
 	int                        key_capslk = 0;
 	CONSOLE                   *cons;
 	int                        j, x, y, mmx = -1, mmy = -1, mmx2 = 0;
-	SHEET					  *sht = 0, *key_win;
+	SHEET					  *sht = 0, *key_win, *sht2;
 	
 
 	static char keytable0[0x80] = {
@@ -102,8 +102,6 @@ void HariMain(void)
 	sheet_updown(key_win,       1);
 	sheet_updown(sht_mouse,     2);
 	keywin_on(key_win);
-
-
 
 	for (;;) 
 	{
@@ -345,9 +343,14 @@ void HariMain(void)
 											}
 											else
 											{
+												/*命令行窗口*/
 												task = sht->task;
+												sheet_updown(sht, -1); /*隐藏图层*/
+												keywin_off(key_win);
+												key_win = shtctl->sheets[shtctl->top - 1];
+												keywin_on(key_win);
 												io_cli();
-												fifo32_put(&task->fifo, 4);
+												fifo32_put(&task->fifo, 4); /*写4表示关闭命令行窗口*/
 												io_sti();
 											}
 										}
@@ -384,6 +387,12 @@ void HariMain(void)
 			else if(1024 <= i && i <= 2023)
 			{
 				close_constask(taskctl->tasks0 + (i - 1024));
+			}
+			else if(2024 <= i && i <= 2279)
+			{
+				sht2 = shtctl->sheets0 + (i - 2024);
+				memman_free_4k(memman, (int)sht2->buf, 256 * 165);
+				sheet_free(sht2);
 			}
 		}
 	}
