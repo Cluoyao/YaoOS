@@ -820,7 +820,7 @@ void   cmd_start(CONSOLE *cons, char *cmdline, int memtotal)
 
 void   cmd_ncst(CONSOLE *cons, char *cmdline, int memtotal)
 {
-	TASK   *task = open_console(0, memtotal);
+	TASK   *task = open_constask(0, memtotal);
 	FIFO32 *fifo = &task->fifo;
 	int     i;
 	/*将命令行输入的字符串复制到新的命令行窗口*/
