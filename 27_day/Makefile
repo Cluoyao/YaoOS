@@ -43,7 +43,7 @@ haribote.img : haribote/ipl10.bin haribote/haribote.sys Makefile \
 run :
 	$(MAKE) haribote.img
 	$(COPY) haribote.img ..\z_tools\qemu\fdimage0.bin
-#   $(MAKE) -C ../z_tools/qemu
+	$(MAKE) -C ../z_tools/qemu
 
 install :
 	$(MAKE) haribote.img
